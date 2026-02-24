@@ -9,3 +9,4 @@ export { default as GaPanel } from "./GaPanel";
 export { default as BudgetPanel } from "./BudgetPanel";
 export { default as RevenuePanel } from "./RevenuePanel";
 export { default as ProductPanel } from "./ProductPanel";
+export { default as CampaignBuilderPanel } from "./CampaignBuilderPanel";

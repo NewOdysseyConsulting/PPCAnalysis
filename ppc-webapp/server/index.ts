@@ -4,6 +4,7 @@ import cors from "cors";
 import keywordsRouter from "./routes/keywords.ts";
 import stripeRouter from "./routes/stripe.ts";
 import seoRouter from "./routes/seo.ts";
+import aiRouter from "./routes/ai.ts";
 
 interface ApiError extends Error {
   status?: number;
@@ -25,6 +26,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use("/api/keywords", keywordsRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/seo", seoRouter);
+app.use("/api/ai", aiRouter);
 
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

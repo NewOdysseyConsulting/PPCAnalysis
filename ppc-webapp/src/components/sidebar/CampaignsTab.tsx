@@ -1,14 +1,17 @@
 import React from "react";
 import { Target, ChevronRight, Layers, PenTool, FileDown, Plus } from "lucide-react";
 import { COLORS } from "../../constants";
+import type { Campaign } from "../../types";
 
 interface CampaignsTabProps {
-  campaigns: any[];
+  campaigns: Campaign[];
   expandedCampaignSidebar: number;
   setExpandedCampaignSidebar: (idx: number) => void;
   setPanelMode: (mode: string) => void;
   setPanelOpen: (open: boolean) => void;
   setActiveCampaign: (idx: number) => void;
+  onCreateCampaign: () => void;
+  onExportCampaign: () => void;
 }
 
 export const CampaignsTab: React.FC<CampaignsTabProps> = ({
@@ -18,6 +21,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
   setPanelMode,
   setPanelOpen,
   setActiveCampaign,
+  onCreateCampaign,
+  onExportCampaign,
 }) => {
   return (
     <>
@@ -34,7 +39,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
 
       <div style={{ flex: 1, overflow: "auto", padding: 12 }}>
         {campaigns.map((campaign, ci) => {
-          const totalKeywords = campaign.adGroups.reduce((a: number, g: any) => a + g.keywords.length, 0);
+          const totalKeywords = campaign.adGroups.reduce((a: number, g) => a + g.keywords.length, 0);
           const statusStyles: Record<string, { bg: string; color: string }> = {
             draft: { bg: COLORS.amberDim, color: COLORS.amber },
             active: { bg: COLORS.greenDim, color: COLORS.green },
@@ -43,7 +48,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
           const st = statusStyles[campaign.status] || statusStyles.draft;
 
           return (
-            <div key={ci} style={{
+            <div key={campaign.id} style={{
               background: COLORS.bgCard, border: `1px solid ${expandedCampaignSidebar === ci ? COLORS.accent : COLORS.border}`,
               borderRadius: 10, marginBottom: 10, overflow: "hidden",
               transition: "border-color 0.15s ease",
@@ -75,8 +80,8 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
               {/* Campaign Details */}
               {expandedCampaignSidebar === ci && (
                 <div style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                  {campaign.adGroups.map((ag: any, gi: number) => (
-                    <div key={gi} style={{
+                  {campaign.adGroups.map((ag, gi: number) => (
+                    <div key={ag.id} style={{
                       padding: "10px 16px 10px 36px", display: "flex", alignItems: "center", gap: 8,
                       borderBottom: gi < campaign.adGroups.length - 1 ? `1px solid ${COLORS.borderSubtle}` : "none",
                     }}>
@@ -103,6 +108,7 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
                       <PenTool size={11} /> Edit Campaign
                     </button>
                     <button
+                      onClick={onExportCampaign}
                       style={{
                         height: 30, padding: "0 12px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
                         background: "transparent", color: COLORS.textSecondary, cursor: "pointer",
@@ -120,7 +126,9 @@ export const CampaignsTab: React.FC<CampaignsTabProps> = ({
         })}
 
         {/* Create New Campaign */}
-        <button style={{
+        <button
+          onClick={onCreateCampaign}
+          style={{
           width: "100%", padding: "14px 16px", borderRadius: 10,
           border: `1px dashed ${COLORS.accent}`, background: COLORS.accentDim,
           color: COLORS.accent, cursor: "pointer", fontSize: 12, fontWeight: 600,

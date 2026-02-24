@@ -5,10 +5,13 @@ import { getStripeMetrics, getStripeAttribution, getStripeTimeline, getStripeSta
 import type { StripeMetrics, StripeAttribution, StripeTimelinePoint } from "./services/stripe";
 import { getSerpFeatures, getSerpCompetitors, getHistoricalRanks, getBacklinkProfile, getBacklinkComparison, getGscData, getContentGaps } from "./services/seo";
 import type { SerpFeatureResult, SerpCompetitor, HistoricalRank, BacklinkProfile, GscData, ContentGap } from "./services/seo";
+import { downloadKeywordsCsv, downloadGoogleAdsEditor, downloadPdfReport } from "./services/export";
+import { sendChatMessage } from "./services/ai";
+import type { Campaign } from "./types";
 import { COLORS } from "./constants";
 import { Sparkline, IntentBadge, MetricChip } from "./components/ui";
 import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_PRODUCTS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES } from "./constants";
-import { TablePanel, CompetitorPanel, VisualPanel, CampaignPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel } from "./components/panels";
+import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel } from "./components/panels";
 import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel } from "./components/sidebar";
 
 // ════════════════════════════════════════════════════════════════
@@ -27,9 +30,10 @@ export default function OrionApp() {
   const [sortDir, setSortDir] = useState("desc");
   const [activeFilters, setActiveFilters] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [campaigns, setCampaigns] = useState(SAMPLE_CAMPAIGNS);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(SAMPLE_CAMPAIGNS);
   const [activeCampaign, setActiveCampaign] = useState(0);
   const [activeAdGroup, setActiveAdGroup] = useState(0);
+  const [aiChatHistory, setAiChatHistory] = useState<{ role: string; content: string }[]>([]);
   const [sidebarTab, setSidebarTab] = useState("chat"); // chat | seeds | groups | campaigns | products
   const [products, setProducts] = useState(SAMPLE_PRODUCTS);
   const [showProductInput, setShowProductInput] = useState(false);
@@ -755,6 +759,74 @@ export default function OrionApp() {
     setSeoLoading(null);
   }, [seedKeywords, adjustedKeywords]);
 
+  // ── Export handlers ──
+  const handleExportKeywords = useCallback(() => {
+    downloadKeywordsCsv(mergedKeywords, market, `keywords-${market.code.toLowerCase()}.csv`);
+  }, [mergedKeywords, market]);
+
+  const handleExportGoogleAds = useCallback(() => {
+    downloadGoogleAdsEditor(campaigns as any, market, `google-ads-${market.code.toLowerCase()}.csv`);
+  }, [campaigns, market]);
+
+  const handleExportPdf = useCallback(() => {
+    const sections = [
+      {
+        title: "Keyword Summary",
+        type: "summary" as const,
+        metrics: [
+          { label: "Total Keywords", value: String(mergedKeywords.length) },
+          { label: "Avg CPC", value: `${market.currency}${avgCpc}` },
+          { label: "Avg Volume", value: String(avgVolume) },
+          { label: "Market", value: market.name },
+        ],
+      },
+      {
+        title: "Top Keywords",
+        type: "table" as const,
+        headers: ["Keyword", "Volume", "CPC", "Difficulty", "Intent", "Relevance"],
+        rows: sortedKeywords.slice(0, 20).map((k: any) => [
+          k.keyword, k.volume, `${market.currency}${k.cpc.toFixed(2)}`, k.difficulty, k.intent, k.relevance,
+        ]),
+      },
+    ];
+    downloadPdfReport(sections, {
+      title: `Orion Keyword Report — ${market.name}`,
+      market: market.name,
+      date: new Date().toLocaleDateString(),
+      currency: market.currency,
+    });
+  }, [mergedKeywords, sortedKeywords, market, avgCpc, avgVolume]);
+
+  // ── Campaign handlers ──
+  const handleUpdateCampaigns = useCallback((updated: Campaign[]) => {
+    setCampaigns(updated);
+  }, []);
+
+  const handleCreateCampaign = useCallback(() => {
+    const newCampaign: Campaign = {
+      id: crypto.randomUUID(),
+      name: `New Campaign — ${market.name}`,
+      status: "draft",
+      adGroups: [{
+        id: crypto.randomUUID(),
+        name: "Ad Group 1",
+        keywords: [],
+        negativeKeywords: [],
+        headlines: ["Headline 1", "Headline 2", "Headline 3"],
+        descriptions: ["Description 1", "Description 2"],
+      }],
+      negativeKeywords: [],
+      bidConfig: { strategy: "manual-cpc", dailyBudget: 20, maxCpcLimit: 5.00 },
+      targetCountries: [market.code],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setCampaigns(prev => [...prev, newCampaign]);
+    setActiveCampaign(campaigns.length);
+    setPanelMode("campaign");
+    setPanelOpen(true);
+  }, [market, campaigns.length]);
+
   // ── Chat send handler (must be after API handlers) ──
   const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
@@ -812,129 +884,103 @@ export default function OrionApp() {
       }
     }
 
-    // Simulate AI response for non-API queries (or when no credentials)
-    setTimeout(() => {
-      let response: { role: "system"; content: string; timestamp: Date; action?: () => void };
+    // ── Panel-routing shortcuts (keep these for instant navigation) ──
+    const panelRoutes: [RegExp | ((s: string) => boolean), string, string, (() => void)?][] = [
+      [s => s.includes("serp") || s.includes("featured snippet") || s.includes("people also ask"), "seo", "Analyzing SERP features for your keywords. Check the SEO panel.", () => handleFetchSerpFeatures()],
+      [s => s.includes("backlink") || s.includes("domain authority"), "backlinks", "Analyzing backlink profile. Check the Backlinks panel.", () => handleFetchBacklinks()],
+      [s => s.includes("rank track") || s.includes("position history") || s.includes("rank history"), "seo", "Loading rank history. Check the SEO panel for position trends.", () => handleFetchRankHistory()],
+      [s => s.includes("content gap") || s.includes("content opportunit"), "seo", "Analyzing content gaps. Check the SEO panel.", () => handleFetchContentGaps()],
+      [s => s.includes("search console") || s.includes("gsc"), "gsc", "Loading Google Search Console data.", () => handleFetchGsc()],
+      [s => (s.includes("stripe") || s.includes("mrr") || s.includes("ltv") || s.includes("churn")), "revenue", stripeConnected ? "Loading live Stripe data." : "Checking Stripe connection... Set STRIPE_SECRET_KEY in .env.", () => handleStripeRefresh()],
+      [s => s.includes("show opportunity") || s.includes("opportunity map") || s.includes("scatter"), "visual", "Opening the Opportunity Map."],
+      [s => s.includes("show ga") || s.includes("show analytics") || s.includes("ga analytics"), "ga", "Opening Google Analytics panel."],
+    ];
 
-      if (lower.includes("long-tail") || lower.includes("keyword") && lower.includes("accounts payable")) {
-        response = {
+    for (const [matcher, panel, msg, action] of panelRoutes) {
+      const match = typeof matcher === "function" ? matcher(lower) : matcher.test(lower);
+      if (match) {
+        if (action) action();
+        setTimeout(() => {
+          setIsTyping(false);
+          setMessages(prev => [...prev, { role: "system", content: msg, timestamp: new Date(), action: () => { setPanelMode(panel); setPanelOpen(true); } }]);
+          setPanelMode(panel);
+          setPanelOpen(true);
+        }, 800);
+        return;
+      }
+    }
+
+    // ── Export shortcuts ──
+    if (lower.includes("export") || lower.includes("csv") || lower.includes("download")) {
+      if (lower.includes("google ads") || lower.includes("campaign")) {
+        handleExportGoogleAds();
+      } else if (lower.includes("pdf") || lower.includes("report")) {
+        handleExportPdf();
+      } else {
+        handleExportKeywords();
+      }
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, {
           role: "system",
-          content: `Found **${adjustedKeywords.length} keyword variations** for ${market.name}.\n\n**Key findings:**\n- Average CPC: **${market.currency}${avgCpc}** \n- **${adjustedKeywords.filter((k: any) => k.group === "high-opportunity").length} high-opportunity keywords** with transactional intent\n- ${market.competitorNote}\n\nThe data panel shows all results sorted by opportunity score.${!hasApiCredentials ? "\n\n*Connect your DataForSEO API key to get live keyword data instead of sample data.*" : ""}`,
+          content: `**Export started.** Your download should begin automatically. Available exports:\n\n- **"Export keywords"** — CSV with all ${mergedKeywords.length} keywords\n- **"Export Google Ads"** — Campaign-ready file for Google Ads Editor\n- **"Export PDF report"** — Print-friendly keyword report\n\nYou can also use the export buttons in the panel header.`,
           timestamp: new Date(),
-          action: () => { setPanelMode("table"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("competitor") || lower.includes("tipalti") || lower.includes("bill.com")) {
-        response = {
+        }]);
+      }, 600);
+      return;
+    }
+
+    // ── Budget quick-view ──
+    if (lower.includes("budget") || lower.includes("spend") || lower.includes("forecast") || (lower.includes("how much") && lower.includes("cost"))) {
+      setTimeout(() => {
+        setIsTyping(false);
+        setPanelMode("budget");
+        setPanelOpen(true);
+        setMessages(prev => [...prev, {
           role: "system",
-          content: `**Competitor Landscape — UK AP Automation:**\n\n| Competitor | Paid Keywords (UK) | Est. Monthly Spend |\n|---|---|---|\n| Bill.com | 128 keywords | $82K/mo |\n| Tipalti | 95 keywords | $54K/mo |\n| Stampli | 44 keywords | $22K/mo |\n| AvidXchange | 67 keywords | $38K/mo |\n\n**Critical gap:** Bill.com dominates volume but overspends on broad terms. Their top keyword "accounts payable software" has a CPC of £8.40 — you can outperform on long-tail at £3-4. Tipalti isn't bidding on any QuickBooks-specific terms.\n\nSwitch to the **Competitor panel** to see the full keyword intersection matrix.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("competitor"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("campaign") || lower.includes("build") || lower.includes("ad group") || lower.includes("ad copy")) {
-        response = {
-          role: "system",
-          content: `I've structured a campaign draft based on your high-opportunity keywords and Nexus AP's product profile.\n\n**Campaign: Nexus AP — UK Launch**\n- **3 ad groups** clustered by theme\n- **8 keywords** across groups\n- **6 headline variations** and **6 descriptions** generated\n- Estimated monthly budget: **£540-720**\n- Expected CTR: **3.2-4.5%** (above B2B SaaS average)\n\nThe campaign panel shows the full structure with editable ad copy. Each headline and description is tailored to the keyword cluster's intent and Nexus AP's positioning against Bill.com and Tipalti.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("campaign"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("product") || lower.includes("nexus")) {
-        response = {
-          role: "system",
-          content: `**Active Product Profile — Nexus AP:**\n\n- **ACV Range:** £588–£2,400/year\n- **Target Buyer:** Financial Controllers, AP Managers at 10-200 employee companies\n- **Key Integrations:** QuickBooks Online, Xero\n- **Core Value Props:** Three-way matching, automated approval workflows, supplier payment automation, real-time AP dashboard\n- **Differentiator:** Purpose-built for SMBs — no enterprise bloat, connects to QBO/Xero in 2 minutes\n\nThis profile is used to generate contextual ad copy and score keyword relevance. You can edit it in the Products panel.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("product"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("serp") || lower.includes("serp feature") || lower.includes("featured snippet") || lower.includes("people also ask")) {
-        handleFetchSerpFeatures();
-        response = {
-          role: "system",
-          content: `Analyzing SERP features for your keywords in the ${market.name} market. Check the SEO panel for featured snippet opportunities, PAA boxes, and other SERP elements.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("seo"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("backlink") || lower.includes("domain authority") || lower.includes("referring domain")) {
-        handleFetchBacklinks();
-        response = {
-          role: "system",
-          content: `Analyzing backlink profile. Check the Backlinks panel for domain authority, referring domains, anchor text distribution, and competitor comparison.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("backlinks"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("rank track") || lower.includes("position history") || lower.includes("rank history")) {
-        handleFetchRankHistory();
-        response = {
-          role: "system",
-          content: `Loading rank history for your tracked keywords. Check the SEO panel for position trends over the last 12 months.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("seo"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("content gap") || lower.includes("content opportunit")) {
-        handleFetchContentGaps();
-        response = {
-          role: "system",
-          content: `Analyzing content gaps — keywords your competitors rank for but you don't. Check the SEO panel for high-opportunity content recommendations.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("seo"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("search console") || lower.includes("gsc")) {
-        handleFetchGsc();
-        response = {
-          role: "system",
-          content: `Loading Google Search Console data — organic queries, pages, devices, and country breakdown. Check the GSC panel for details.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("gsc"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("budget") || lower.includes("spend") || lower.includes("forecast") || (lower.includes("how much") && lower.includes("cost"))) {
-        const bAvgCpc = mergedKeywords.length > 0 ? (mergedKeywords.reduce((a: number, k: any) => a + k.cpc, 0) / mergedKeywords.length) : 0;
-        const bClicks = bAvgCpc > 0 ? Math.round(budgetMonthly / bAvgCpc) : 0;
-        const bPaidCh = adjustedGA.channels.find((c: any) => c.channel === "Paid Search");
-        const bConvR = budgetConvRateOverride ?? (bPaidCh?.convRate || 4.8);
-        const bConv = Math.round(bClicks * (bConvR / 100));
-        const bCpa = bConv > 0 ? (budgetMonthly / bConv).toFixed(2) : "N/A";
-        const bRev = bConv * 1494;
-        const bRoas = budgetMonthly > 0 ? (bRev / budgetMonthly).toFixed(1) : "0";
-        response = {
-          role: "system",
-          content: `**Budget Planner for ${market.name}:**\n\nBased on ${mergedKeywords.length} keywords with avg CPC ${market.currency}${bAvgCpc.toFixed(2)}:\n\n| Metric | Projection |\n|---|---|\n| Monthly Budget | ${market.currency}${budgetMonthly.toLocaleString()} |\n| Estimated Clicks | ${bClicks.toLocaleString()} |\n| Conversions (${bConvR}%) | ${bConv} |\n| CPA | ${market.currency}${bCpa} |\n| Est. Annual Revenue | ${market.currency}${bRev.toLocaleString()} |\n| ROAS | ${bRoas}x |\n\nOpen the **Budget Planner** panel to adjust your budget, override CTR/conversion rates, and explore scenarios.`,
+          content: `Opening the **Budget Planner** for ${market.name}. Use the slider, override CTR/conversion rates, and explore 7 budget scenarios.`,
           timestamp: new Date(),
           action: () => { setPanelMode("budget"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("stripe") || lower.includes("mrr") || lower.includes("revenue") || lower.includes("ltv") || lower.includes("churn") || lower.includes("subscription")) {
-        handleStripeRefresh();
-        response = {
-          role: "system",
-          content: stripeConnected
-            ? `Loading live Stripe data — MRR, LTV, churn, and keyword attribution. Check the Revenue panel for real-time subscription metrics.`
-            : `Checking Stripe connection... Set STRIPE_SECRET_KEY in your .env to connect. Opening the Revenue panel now.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("revenue"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("ga") || lower.includes("analytics") || lower.includes("traffic") || lower.includes("conversion")) {
-        response = {
-          role: "system",
-          content: `**Google Analytics — Last 28 Days:**\n\n- **Users:** 12,480 (+22% vs prior period)\n- **Sessions:** 18,640 (+19%)\n- **Bounce Rate:** 42.3% (down from 46.1% — improving)\n- **Avg Session Duration:** 3:24\n\n**Channel Performance:**\n- **Paid Search** leads in revenue: £22,600 (4.8% conversion rate)\n- **Organic Search** leads in users: 5,240 (3.4% conversion rate)\n- **Email** has highest conversion rate: 5.6%\n\n**Key Conversions:**\n- Demo Requests: 142 (£42,600 value)\n- Free Trial Signups: 86 (£25,800 value)\n\nSwitch to the **GA panel** for channel breakdown, top pages, and conversion details.`,
-          timestamp: new Date(),
-          action: () => { setPanelMode("ga"); setPanelOpen(true); },
-        };
-      } else if (lower.includes("export") || lower.includes("csv") || lower.includes("google ads editor")) {
-        response = {
-          role: "system",
-          content: `**Export ready.** I've prepared two formats:\n\n1. **CSV** — Full keyword dataset with all metrics (${SAMPLE_KEYWORDS.length} keywords)\n2. **Google Ads Editor** — Campaign-ready import file with keywords, match types, suggested bids, and ad group assignments\n\nThe Google Ads Editor file maps directly to the "Nexus AP — UK Launch" campaign structure. Import it into Google Ads and your campaign goes live immediately.\n\n*Click the download buttons in the data panel toolbar.*`,
-          timestamp: new Date(),
-        };
-      } else {
-        response = {
-          role: "system",
-          content: `I can help with that. Here are some things I can do:\n\n- **"Find long-tail keywords for [topic]"** — Pulls from DataForSEO with full metrics\n- **"Compare competitors for [keyword]"** — Shows who's bidding and where the gaps are\n- **"Build a campaign from [keyword group]"** — Generates ad groups, copy, and budget estimates\n- **"Show opportunity map"** — Visual scatter plot of volume vs competition\n- **"Show GSC performance"** — Google Search Console queries, pages & ranking data\n- **"Show GA analytics"** — Google Analytics traffic, channels & conversions\n- **"Budget forecast"** — PPC budget planner with click/conversion projections\n- **"Export to Google Ads Editor"** — Campaign-ready file for immediate import\n\nWhat would you like to explore?`,
-          timestamp: new Date(),
-        };
-      }
+        }]);
+      }, 600);
+      return;
+    }
 
-      setIsTyping(false);
-      setMessages(prev => [...prev, response]);
-      if (response.action) response.action();
-    }, 1800);
-  }, [inputValue, hasApiCredentials, seedKeywords, adjustedKeywords, handleLiveResearch, handleSiteResearch, handleTrafficProjection, handleCompetitorAnalysis, handleCompareMarkets, handleBingResearch, handleStripeRefresh, stripeConnected, market, avgCpc, mergedKeywords, adjustedGA, budgetMonthly, budgetConvRateOverride, handleFetchSerpFeatures, handleFetchBacklinks, handleFetchRankHistory, handleFetchContentGaps, handleFetchGsc]);
+    // ── AI Chat — send to backend LLM ──
+    const context = {
+      product: products[0] ? { name: products[0].name, description: products[0].description, acv: products[0].acv, target: products[0].target } : undefined,
+      keywordsSummary: { count: mergedKeywords.length, avgCpc: parseFloat(avgCpc), topKeywords: mergedKeywords.slice(0, 5).map((k: any) => k.keyword) },
+      campaignsSummary: { count: campaigns.length, totalKeywords: campaigns.reduce((a, c) => a + c.adGroups.reduce((b, g) => b + g.keywords.length, 0), 0) },
+      market: { code: market.code, name: market.name, currency: market.currency },
+      budgetMonthly,
+    };
+    const history = aiChatHistory.slice(-10);
+
+    sendChatMessage(inputValue, history, context)
+      .then(result => {
+        setIsTyping(false);
+        const aiMsg = {
+          role: "system" as const,
+          content: result.message,
+          timestamp: new Date(),
+          action: result.suggestedAction?.panel ? () => { setPanelMode(result.suggestedAction!.panel!); setPanelOpen(true); } : undefined,
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        setAiChatHistory(prev => [...prev, { role: "user", content: inputValue }, { role: "assistant", content: result.message }]);
+        if (result.suggestedAction?.panel) {
+          setPanelMode(result.suggestedAction.panel);
+          setPanelOpen(true);
+        }
+      })
+      .catch(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, {
+          role: "system",
+          content: `I can help with that. Here are some things I can do:\n\n- **"Find long-tail keywords"** — Keyword research with full metrics\n- **"Compare competitors"** — See who's bidding and find gaps\n- **"Build campaign"** — View and edit campaign structure\n- **"Show opportunity map"** — Volume vs competition scatter plot\n- **"Export keywords"** — Download CSV, Google Ads Editor, or PDF\n- **"Budget forecast"** — PPC budget planner with projections\n\nWhat would you like to explore?`,
+          timestamp: new Date(),
+        }]);
+      });
+  }, [inputValue, hasApiCredentials, seedKeywords, adjustedKeywords, handleLiveResearch, handleSiteResearch, handleTrafficProjection, handleCompetitorAnalysis, handleCompareMarkets, handleBingResearch, handleStripeRefresh, stripeConnected, market, avgCpc, mergedKeywords, adjustedGA, budgetMonthly, budgetConvRateOverride, handleFetchSerpFeatures, handleFetchBacklinks, handleFetchRankHistory, handleFetchContentGaps, handleFetchGsc, products, campaigns, aiChatHistory, handleExportKeywords, handleExportGoogleAds, handleExportPdf]);
 
   // ── Styles ──
   const fontLink = "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap";
@@ -1031,6 +1077,8 @@ export default function OrionApp() {
             setPanelMode={setPanelMode}
             setPanelOpen={setPanelOpen}
             setActiveCampaign={setActiveCampaign}
+            onCreateCampaign={handleCreateCampaign}
+            onExportCampaign={handleExportGoogleAds}
           />
         )}
 
@@ -1069,13 +1117,25 @@ export default function OrionApp() {
                 }}>
                   <Filter size={11} /> Filters
                 </button>
-                <button style={{
+                <button
+                  onClick={handleExportKeywords}
+                  style={{
                   height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
                   background: "transparent", color: COLORS.textSecondary, cursor: "pointer",
                   fontSize: 11, fontFamily: "'DM Sans', sans-serif",
                   display: "flex", alignItems: "center", gap: 4,
                 }}>
-                  <Download size={11} /> Export
+                  <Download size={11} /> Export CSV
+                </button>
+                <button
+                  onClick={handleExportPdf}
+                  style={{
+                  height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
+                  background: "transparent", color: COLORS.textSecondary, cursor: "pointer",
+                  fontSize: 11, fontFamily: "'DM Sans', sans-serif",
+                  display: "flex", alignItems: "center", gap: 4,
+                }}>
+                  <FileDown size={11} /> PDF Report
                 </button>
                 <button style={{
                   height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.accent}`,
@@ -1109,15 +1169,9 @@ export default function OrionApp() {
 
             {panelMode === "campaign" && (
               <div style={{ display: "flex", gap: 4 }}>
-                <button style={{
-                  height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
-                  background: "transparent", color: COLORS.textSecondary, cursor: "pointer",
-                  fontSize: 11, fontFamily: "'DM Sans', sans-serif",
-                  display: "flex", alignItems: "center", gap: 4,
-                }}>
-                  <PenTool size={11} /> Regenerate Copy
-                </button>
-                <button style={{
+                <button
+                  onClick={handleExportGoogleAds}
+                  style={{
                   height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.accent}`,
                   background: COLORS.accentDim, color: COLORS.accent, cursor: "pointer",
                   fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
@@ -1167,10 +1221,14 @@ export default function OrionApp() {
 
           {/* ── CAMPAIGN BUILDER MODE ── */}
           {panelMode === "campaign" && (
-            <CampaignPanel
+            <CampaignBuilderPanel
               campaigns={campaigns}
-              activeAdGroup={activeAdGroup}
-              setActiveAdGroup={setActiveAdGroup}
+              onUpdateCampaigns={handleUpdateCampaigns}
+              activeCampaignIdx={activeCampaign}
+              setActiveCampaignIdx={setActiveCampaign}
+              activeAdGroupIdx={activeAdGroup}
+              setActiveAdGroupIdx={setActiveAdGroup}
+              market={market}
             />
           )}
 

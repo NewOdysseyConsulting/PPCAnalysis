@@ -1,4 +1,5 @@
 import { COLORS } from "./colors";
+import type { Campaign } from "../types";
 
 // ── Sample Data ──
 export const SAMPLE_KEYWORDS = [
@@ -26,30 +27,74 @@ export const SAMPLE_COMPETITORS = [
   { domain: "avidxchange.com", keywords_shared: 24, paid_keywords: 67, organic_keywords: 510, est_traffic: 19600, budget: "$38K/mo" },
 ];
 
-export const SAMPLE_CAMPAIGNS = [
+export const SAMPLE_CAMPAIGNS: Campaign[] = [
   {
+    id: "cmp-001",
     name: "Nexus AP — UK Launch",
     status: "draft",
+    bidConfig: {
+      strategy: "manual-cpc",
+      maxCpcLimit: 5.00,
+      dailyBudget: 20,
+    },
+    targetCountries: ["GB"],
+    landingPageUrl: "https://nexusap.com/uk",
+    negativeKeywords: [
+      { keyword: "free", matchType: "broad", level: "campaign" },
+      { keyword: "open source", matchType: "phrase", level: "campaign" },
+      { keyword: "enterprise", matchType: "broad", level: "campaign" },
+    ],
     adGroups: [
       {
+        id: "ag-001",
         name: "Invoice Processing",
-        keywords: ["automate invoice processing small business", "invoice processing software", "automated invoice approval workflow"],
+        keywords: [
+          { keyword: "automate invoice processing small business", matchType: "phrase" },
+          { keyword: "invoice processing software", matchType: "broad" },
+          { keyword: "automated invoice approval workflow", matchType: "exact" },
+        ],
+        negativeKeywords: [
+          { keyword: "manual", matchType: "broad", level: "ad-group" },
+        ],
         headlines: ["Automate Your Invoice Processing", "Cut Invoice Time by 80%", "AP Automation from £49/mo"],
         descriptions: ["Stop processing invoices manually. Nexus AP automates matching, approval & payment in one platform.", "Connect QuickBooks or Xero in 2 minutes. See every invoice, every approval, every payment — in real time."],
+        finalUrl: "https://nexusap.com/uk/invoice-processing",
+        displayPath1: "invoice",
+        displayPath2: "automation",
       },
       {
+        id: "ag-002",
         name: "QuickBooks/Xero Integration",
-        keywords: ["AP automation QuickBooks", "AP automation Xero integration", "accounts payable software for SMB"],
+        keywords: [
+          { keyword: "AP automation QuickBooks", matchType: "phrase" },
+          { keyword: "AP automation Xero integration", matchType: "phrase" },
+          { keyword: "accounts payable software for SMB", matchType: "broad" },
+        ],
+        negativeKeywords: [],
         headlines: ["AP Automation for QuickBooks", "Connect Xero in 2 Minutes", "Automate Payables — £49/mo"],
         descriptions: ["Purpose-built AP automation that plugs directly into your existing QuickBooks or Xero. No migration needed.", "Three-way matching, automated approvals, and supplier payments — all synced with your accounting software."],
+        finalUrl: "https://nexusap.com/uk/integrations",
+        displayPath1: "integrations",
+        displayPath2: "quickbooks",
       },
       {
+        id: "ag-003",
         name: "Competitor Alternatives",
-        keywords: ["Bill.com alternative cheaper", "Tipalti alternative small business"],
+        keywords: [
+          { keyword: "Bill.com alternative cheaper", matchType: "exact" },
+          { keyword: "Tipalti alternative small business", matchType: "phrase" },
+        ],
+        negativeKeywords: [],
         headlines: ["Tired of Bill.com Pricing?", "The Tipalti Alternative for SMBs", "AP Automation Without the Bloat"],
         descriptions: ["Nexus AP delivers everything Bill.com does at a fraction of the cost. Built for small and mid-market teams.", "Enterprise AP features without enterprise complexity. Switch from Tipalti in under a week."],
+        finalUrl: "https://nexusap.com/uk/compare",
+        displayPath1: "compare",
+        displayPath2: "alternatives",
       },
     ],
+    startDate: "2026-03-01",
+    createdAt: "2026-02-20T10:00:00Z",
+    updatedAt: "2026-02-24T14:30:00Z",
   },
 ];
 
