@@ -5,6 +5,7 @@ import keywordsRouter from "./routes/keywords.ts";
 import stripeRouter from "./routes/stripe.ts";
 import seoRouter from "./routes/seo.ts";
 import aiRouter from "./routes/ai.ts";
+import budgetRouter from "./routes/budget.ts";
 
 interface ApiError extends Error {
   status?: number;
@@ -27,6 +28,7 @@ app.use("/api/keywords", keywordsRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/seo", seoRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/budget", budgetRouter);
 
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

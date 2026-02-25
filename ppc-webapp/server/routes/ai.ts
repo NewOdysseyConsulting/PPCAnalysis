@@ -4,6 +4,8 @@ import {
   generateAdCopy,
   generateContentBrief,
   suggestCampaignStructure,
+  generateIcpProfile,
+  generateBuyerPersona,
 } from "../services/ai.ts";
 
 const router = Router();
@@ -73,6 +75,40 @@ router.post("/campaign-suggest", async (req: Request, res: Response, next: NextF
       return res.status(400).json({ error: "market (string) is required" });
     }
     const result = await suggestCampaignStructure({ keywords, product, budget, market });
+    res.json({ result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/ai/generate-icp
+router.post("/generate-icp", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { product, market, existingIcps } = req.body;
+    if (!product) {
+      return res.status(400).json({ error: "product object is required" });
+    }
+    if (!market || typeof market !== "string") {
+      return res.status(400).json({ error: "market (string) is required" });
+    }
+    const result = await generateIcpProfile({ product, market, existingIcps });
+    res.json({ result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/ai/generate-persona
+router.post("/generate-persona", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { product, icpName, market, existingPersonas } = req.body;
+    if (!product) {
+      return res.status(400).json({ error: "product object is required" });
+    }
+    if (!market || typeof market !== "string") {
+      return res.status(400).json({ error: "market (string) is required" });
+    }
+    const result = await generateBuyerPersona({ product, icpName, market, existingPersonas });
     res.json({ result });
   } catch (err) {
     next(err);

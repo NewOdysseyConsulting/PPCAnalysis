@@ -37,16 +37,8 @@ Campaign panel is read-only with hardcoded sample data. Users cannot:
 
 **Impact:** Cannot plan real campaigns — only view a template.
 
-### 3. No Non-Search Channels
-Only covers Google Ads + Bing Ads + SEO. Missing:
-- Facebook/Instagram Ads (audience sizing, creative formats, budget modeling)
-- LinkedIn Ads (B2B targeting, Matched Audiences)
-- YouTube/Video Ads
-- Display/Programmatic
-- Email marketing integration
-- Content marketing calendar
-
-**Impact:** Cannot plan a "competitive marketing campaign across multiple channels."
+### 3. Scope: Search Intent Channels Only
+Platform focuses on Google Ads + Bing Ads + SEO — keyword/intent-based channels. Social media advertising (Facebook, Instagram, LinkedIn) is intentionally out of scope as it uses a fundamentally different targeting model (audience/interest-based) that doesn't correlate with search intent intelligence.
 
 ### 4. No Audience/Persona Definition
 Product profiles exist with "target buyer" field, but there's no:

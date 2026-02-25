@@ -6,13 +6,13 @@ import type { StripeMetrics, StripeAttribution, StripeTimelinePoint } from "./se
 import { getSerpFeatures, getSerpCompetitors, getHistoricalRanks, getBacklinkProfile, getBacklinkComparison, getGscData, getContentGaps } from "./services/seo";
 import type { SerpFeatureResult, SerpCompetitor, HistoricalRank, BacklinkProfile, GscData, ContentGap } from "./services/seo";
 import { downloadKeywordsCsv, downloadGoogleAdsEditor, downloadPdfReport } from "./services/export";
-import { sendChatMessage } from "./services/ai";
-import type { Campaign } from "./types";
+import { sendChatMessage, generateIcp, generatePersona } from "./services/ai";
+import type { Campaign, ChannelConfig, IcpProfile, BuyerPersona, AudienceSegment, CampaignTimeline } from "./types";
 import { COLORS } from "./constants";
 import { Sparkline, IntentBadge, MetricChip } from "./components/ui";
-import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_PRODUCTS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES } from "./constants";
-import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel } from "./components/panels";
-import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel } from "./components/sidebar";
+import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_PRODUCTS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES, SAMPLE_CHANNEL_CONFIGS, SAMPLE_ICP, SAMPLE_PERSONAS, SAMPLE_AUDIENCE_SEGMENTS, SAMPLE_TIMELINE } from "./constants";
+import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel, BudgetAllocatorPanel, AudiencePanel, TimelinePanel } from "./components/panels";
+import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel, AudienceTab } from "./components/sidebar";
 
 // ════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -34,7 +34,15 @@ export default function OrionApp() {
   const [activeCampaign, setActiveCampaign] = useState(0);
   const [activeAdGroup, setActiveAdGroup] = useState(0);
   const [aiChatHistory, setAiChatHistory] = useState<{ role: string; content: string }[]>([]);
-  const [sidebarTab, setSidebarTab] = useState("chat"); // chat | seeds | groups | campaigns | products
+  // Phase 3: Budget Allocator
+  const [channelConfigs, setChannelConfigs] = useState<ChannelConfig[]>(SAMPLE_CHANNEL_CONFIGS);
+  // Phase 5: Audience & Personas
+  const [icpProfiles, setIcpProfiles] = useState<IcpProfile[]>(SAMPLE_ICP);
+  const [buyerPersonas, setBuyerPersonas] = useState<BuyerPersona[]>(SAMPLE_PERSONAS);
+  const [audienceSegments, setAudienceSegments] = useState<AudienceSegment[]>(SAMPLE_AUDIENCE_SEGMENTS);
+  // Phase 6: Timeline
+  const [timeline, setTimeline] = useState<CampaignTimeline>(SAMPLE_TIMELINE);
+  const [sidebarTab, setSidebarTab] = useState("chat"); // chat | seeds | groups | campaigns | products | audience
   const [products, setProducts] = useState(SAMPLE_PRODUCTS);
   const [showProductInput, setShowProductInput] = useState(false);
   const [seedKeywords, setSeedKeywords] = useState([
@@ -827,6 +835,48 @@ export default function OrionApp() {
     setPanelOpen(true);
   }, [market, campaigns.length]);
 
+  // ── AI ICP/Persona generation handlers ──
+  const handleGenerateIcp = useCallback(async () => {
+    const product = products[0];
+    if (!product) return;
+    try {
+      const result = await generateIcp(
+        { name: product.name, description: product.description, acv: product.acv, target: product.target },
+        market.code,
+        icpProfiles.map(p => p.name)
+      );
+      const newIcp: IcpProfile = {
+        id: crypto.randomUUID(),
+        ...result,
+      };
+      setIcpProfiles(prev => [...prev, newIcp]);
+    } catch (err) {
+      console.error("ICP generation error:", err);
+    }
+  }, [products, market.code, icpProfiles]);
+
+  const handleGeneratePersona = useCallback(async () => {
+    const product = products[0];
+    if (!product) return;
+    try {
+      const result = await generatePersona(
+        { name: product.name, description: product.description, acv: product.acv, target: product.target },
+        market.code,
+        icpProfiles[0]?.name,
+        buyerPersonas.map(p => p.name)
+      );
+      const newPersona: BuyerPersona = {
+        id: crypto.randomUUID(),
+        icpId: icpProfiles[0]?.id || "",
+        ...result,
+        seniority: (['c-suite', 'director', 'manager', 'individual-contributor'].includes(result.seniority) ? result.seniority : 'manager') as BuyerPersona['seniority'],
+      };
+      setBuyerPersonas(prev => [...prev, newPersona]);
+    } catch (err) {
+      console.error("Persona generation error:", err);
+    }
+  }, [products, market.code, icpProfiles, buyerPersonas]);
+
   // ── Chat send handler (must be after API handlers) ──
   const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
@@ -1091,6 +1141,17 @@ export default function OrionApp() {
           />
         )}
 
+        {/* ═══ AUDIENCE TAB ═══ */}
+        {sidebarTab === "audience" && (
+          <AudienceTab
+            icpProfiles={icpProfiles}
+            buyerPersonas={buyerPersonas}
+            audienceSegments={audienceSegments}
+            setPanelMode={setPanelMode}
+            setPanelOpen={setPanelOpen}
+          />
+        )}
+
       </div>
 
       {/* ═══ DATA PANEL ═══ */}
@@ -1103,7 +1164,7 @@ export default function OrionApp() {
             display: "flex", alignItems: "center", padding: "0 16px", gap: 10,
           }}>
             <span style={{ fontWeight: 600, fontSize: 13 }}>
-              {{ table: "Keyword Explorer", competitor: "Competitor Matrix", visual: "Opportunity Map", campaign: "Campaign Builder", budget: "Budget Planner", revenue: "Revenue & Stripe", seo: "SEO Intelligence", backlinks: "Backlink Analysis", product: "Product Profiles", gsc: "Search Console", ga: "Analytics" }[panelMode]}
+              {{ table: "Keyword Explorer", competitor: "Competitor Matrix", visual: "Opportunity Map", campaign: "Campaign Builder", budget: "Budget Planner", allocator: "Budget Allocator", revenue: "Revenue & Stripe", seo: "SEO Intelligence", backlinks: "Backlink Analysis", product: "Product Profiles", gsc: "Search Console", ga: "Analytics", audience: "Audience & Personas", timeline: "Campaign Timeline" }[panelMode]}
             </span>
             <div style={{ flex: 1 }} />
 
@@ -1310,6 +1371,42 @@ export default function OrionApp() {
           {/* ── PRODUCT PROFILES MODE ── */}
           {panelMode === "product" && (
             <ProductPanel products={products} />
+          )}
+
+          {/* ── BUDGET ALLOCATOR MODE ── */}
+          {panelMode === "allocator" && (
+            <BudgetAllocatorPanel
+              totalBudget={budgetMonthly}
+              setTotalBudget={setBudgetMonthly}
+              channelConfigs={channelConfigs}
+              setChannelConfigs={setChannelConfigs}
+              market={market}
+              stripeMetrics={stripeMetrics}
+            />
+          )}
+
+          {/* ── AUDIENCE & PERSONAS MODE ── */}
+          {panelMode === "audience" && (
+            <AudiencePanel
+              icpProfiles={icpProfiles}
+              setIcpProfiles={setIcpProfiles}
+              buyerPersonas={buyerPersonas}
+              setBuyerPersonas={setBuyerPersonas}
+              audienceSegments={audienceSegments}
+              setAudienceSegments={setAudienceSegments}
+              market={market}
+              onGenerateIcp={handleGenerateIcp}
+              onGeneratePersona={handleGeneratePersona}
+            />
+          )}
+
+          {/* ── CAMPAIGN TIMELINE MODE ── */}
+          {panelMode === "timeline" && (
+            <TimelinePanel
+              timeline={timeline}
+              setTimeline={setTimeline}
+              market={market}
+            />
           )}
 
         </div>

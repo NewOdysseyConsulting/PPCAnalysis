@@ -87,6 +87,29 @@ export async function generateContentBrief(
   return data.result;
 }
 
+export async function generateIcp(
+  product: any,
+  market: string,
+  existingIcps?: string[]
+): Promise<any> {
+  const data = await apiCall("/generate-icp", {
+    body: { product, market, existingIcps },
+  });
+  return data.result;
+}
+
+export async function generatePersona(
+  product: any,
+  market: string,
+  icpName?: string,
+  existingPersonas?: string[]
+): Promise<any> {
+  const data = await apiCall("/generate-persona", {
+    body: { product, market, icpName, existingPersonas },
+  });
+  return data.result;
+}
+
 export async function suggestCampaignStructure(
   keywords: string[],
   product: any,

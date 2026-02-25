@@ -402,6 +402,184 @@ ${competitors.length > 0 ? `Competitors to reference: ${competitors.join(", ")}`
 /**
  * Suggest a campaign structure with ad groups and keyword groupings.
  */
+/**
+ * Generate an ICP profile based on product and market context.
+ */
+export async function generateIcpProfile(params: {
+  product: ProductContext;
+  market: string;
+  existingIcps?: string[];
+}): Promise<{
+  name: string;
+  companySize: { min: number; max: number; label: string };
+  industry: string[];
+  revenue: { min: number; max: number; currency: string };
+  geography: string[];
+  techStack: string[];
+  painPoints: string[];
+  buyingTriggers: string[];
+  decisionMakers: string[];
+  budgetRange: { min: number; max: number; currency: string };
+}> {
+  const { product, market, existingIcps = [] } = params;
+
+  const fallback = {
+    name: `${product.name} — Primary ICP`,
+    companySize: { min: 10, max: 200, label: "SMB" },
+    industry: ["Technology", "Professional Services", "Financial Services"],
+    revenue: { min: 1000000, max: 50000000, currency: "£" },
+    geography: [market],
+    techStack: ["QuickBooks", "Xero", "Microsoft 365"],
+    painPoints: ["Manual invoice processing", "Slow approval workflows", "Lack of visibility into AP"],
+    buyingTriggers: ["Growth phase", "Audit findings", "Staff turnover in AP team"],
+    decisionMakers: ["CFO", "Financial Controller", "AP Manager"],
+    budgetRange: { min: 500, max: 5000, currency: "£" },
+  };
+
+  try {
+    const systemPrompt = `You are a B2B marketing strategist. Generate an Ideal Customer Profile (ICP) for the given product and market.
+
+Return a JSON object with this exact structure:
+{
+  "name": "ICP profile name",
+  "companySize": { "min": 10, "max": 200, "label": "SMB" },
+  "industry": ["Industry 1", "Industry 2"],
+  "revenue": { "min": 1000000, "max": 50000000, "currency": "£" },
+  "geography": ["GB"],
+  "techStack": ["Tool 1", "Tool 2"],
+  "painPoints": ["Pain 1", "Pain 2"],
+  "buyingTriggers": ["Trigger 1", "Trigger 2"],
+  "decisionMakers": ["Title 1", "Title 2"],
+  "budgetRange": { "min": 500, "max": 5000, "currency": "£" }
+}
+
+${existingIcps.length > 0 ? `Existing ICPs to differentiate from: ${existingIcps.join(", ")}. Create a DIFFERENT ICP segment.` : ""}`;
+
+    const userContent = `Product: ${product.name} — ${product.description}
+Target audience: ${product.target}
+ACV: ${product.acv}
+Market: ${market}`;
+
+    const messages: OpenAIMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent },
+    ];
+
+    const result = await callOpenAIJson<typeof fallback>(messages, { temperature: 0.7, maxTokens: 1500 });
+    if (!result) return fallback;
+
+    return {
+      name: result.name || fallback.name,
+      companySize: result.companySize || fallback.companySize,
+      industry: result.industry?.length > 0 ? result.industry : fallback.industry,
+      revenue: result.revenue || fallback.revenue,
+      geography: result.geography?.length > 0 ? result.geography : fallback.geography,
+      techStack: result.techStack?.length > 0 ? result.techStack : fallback.techStack,
+      painPoints: result.painPoints?.length > 0 ? result.painPoints : fallback.painPoints,
+      buyingTriggers: result.buyingTriggers?.length > 0 ? result.buyingTriggers : fallback.buyingTriggers,
+      decisionMakers: result.decisionMakers?.length > 0 ? result.decisionMakers : fallback.decisionMakers,
+      budgetRange: result.budgetRange || fallback.budgetRange,
+    };
+  } catch (err) {
+    console.error("[AI Service] generateIcpProfile error:", err);
+    return fallback;
+  }
+}
+
+/**
+ * Generate a buyer persona based on product, ICP, and market context.
+ */
+export async function generateBuyerPersona(params: {
+  product: ProductContext;
+  icpName?: string;
+  market: string;
+  existingPersonas?: string[];
+}): Promise<{
+  name: string;
+  title: string;
+  department: string;
+  seniority: string;
+  goals: string[];
+  painPoints: string[];
+  objections: string[];
+  triggers: string[];
+  informationSources: string[];
+  decisionCriteria: string[];
+  searchBehavior: string[];
+}> {
+  const { product, icpName, market, existingPersonas = [] } = params;
+
+  const fallback = {
+    name: "Sarah the Financial Controller",
+    title: "Financial Controller",
+    department: "Finance",
+    seniority: "manager",
+    goals: ["Reduce AP processing time", "Improve accuracy", "Better cash flow visibility"],
+    painPoints: ["Drowning in manual invoice work", "Approval bottlenecks", "Cannot track spend in real time"],
+    objections: ["Too expensive for our size", "Integration concerns", "Change management resistance"],
+    triggers: ["Month-end close taking too long", "Audit findings", "Growing invoice volumes"],
+    informationSources: ["LinkedIn", "Industry events", "Peer recommendations", "G2 reviews"],
+    decisionCriteria: ["Ease of integration", "Price per user", "Customer support quality", "Feature completeness"],
+    searchBehavior: ["Searches for 'AP automation software' during month-end", "Compares alternatives on G2", "Looks for case studies from similar companies"],
+  };
+
+  try {
+    const systemPrompt = `You are a B2B marketing strategist. Generate a detailed buyer persona for the given product and market.
+
+Return a JSON object with this exact structure:
+{
+  "name": "Persona Name (e.g., 'Sarah the Financial Controller')",
+  "title": "Job Title",
+  "department": "Department",
+  "seniority": "manager",
+  "goals": ["Goal 1", "Goal 2"],
+  "painPoints": ["Pain 1", "Pain 2"],
+  "objections": ["Objection 1", "Objection 2"],
+  "triggers": ["Trigger 1", "Trigger 2"],
+  "informationSources": ["Source 1", "Source 2"],
+  "decisionCriteria": ["Criterion 1", "Criterion 2"],
+  "searchBehavior": ["What they search for and when"]
+}
+
+Seniority must be one of: c-suite, director, manager, individual-contributor.
+${existingPersonas.length > 0 ? `Existing personas to differentiate from: ${existingPersonas.join(", ")}. Create a DIFFERENT persona.` : ""}
+${icpName ? `This persona belongs to ICP: ${icpName}` : ""}`;
+
+    const userContent = `Product: ${product.name} — ${product.description}
+Target audience: ${product.target}
+ACV: ${product.acv}
+Market: ${market}`;
+
+    const messages: OpenAIMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent },
+    ];
+
+    const result = await callOpenAIJson<typeof fallback>(messages, { temperature: 0.8, maxTokens: 1500 });
+    if (!result) return fallback;
+
+    return {
+      name: result.name || fallback.name,
+      title: result.title || fallback.title,
+      department: result.department || fallback.department,
+      seniority: result.seniority || fallback.seniority,
+      goals: result.goals?.length > 0 ? result.goals : fallback.goals,
+      painPoints: result.painPoints?.length > 0 ? result.painPoints : fallback.painPoints,
+      objections: result.objections?.length > 0 ? result.objections : fallback.objections,
+      triggers: result.triggers?.length > 0 ? result.triggers : fallback.triggers,
+      informationSources: result.informationSources?.length > 0 ? result.informationSources : fallback.informationSources,
+      decisionCriteria: result.decisionCriteria?.length > 0 ? result.decisionCriteria : fallback.decisionCriteria,
+      searchBehavior: result.searchBehavior?.length > 0 ? result.searchBehavior : fallback.searchBehavior,
+    };
+  } catch (err) {
+    console.error("[AI Service] generateBuyerPersona error:", err);
+    return fallback;
+  }
+}
+
+/**
+ * Suggest a campaign structure with ad groups and keyword groupings.
+ */
 export async function suggestCampaignStructure(params: {
   keywords: string[];
   product: ProductContext;

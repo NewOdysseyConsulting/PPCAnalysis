@@ -1,5 +1,5 @@
 import { COLORS } from "./colors";
-import type { Campaign } from "../types";
+import type { Campaign, ChannelConfig, IcpProfile, BuyerPersona, AudienceSegment, CampaignTimeline } from "../types";
 
 // ── Sample Data ──
 export const SAMPLE_KEYWORDS = [
@@ -97,6 +97,289 @@ export const SAMPLE_CAMPAIGNS: Campaign[] = [
     updatedAt: "2026-02-24T14:30:00Z",
   },
 ];
+
+// ── Channel Config Defaults (Phase 3) ──
+export const SAMPLE_CHANNEL_CONFIGS: ChannelConfig[] = [
+  {
+    channel: "google-ads",
+    label: "Google Ads",
+    icon: "Search",
+    color: COLORS.accent,
+    enabled: true,
+    budgetPercent: 85,
+    budgetAbsolute: 850,
+    estimatedCtr: 3.5,
+    estimatedConvRate: 3.2,
+    estimatedCpc: 4.20,
+    notes: "Primary search channel — highest volume, highest intent",
+  },
+  {
+    channel: "bing-ads",
+    label: "Bing Ads",
+    icon: "Globe",
+    color: COLORS.purple,
+    enabled: true,
+    budgetPercent: 15,
+    budgetAbsolute: 150,
+    estimatedCtr: 4.1,
+    estimatedConvRate: 3.8,
+    estimatedCpc: 3.40,
+    notes: "Lower CPC, older demographic, B2B desktop users",
+  },
+];
+
+// ── ICP Profiles (Phase 5) ──
+export const SAMPLE_ICP: IcpProfile[] = [
+  {
+    id: "icp-001",
+    name: "SMB Finance Teams",
+    companySize: { min: 20, max: 200, label: "SMB" },
+    industry: ["Professional Services", "Technology", "Financial Services"],
+    revenue: { min: 1000000, max: 50000000, currency: "£" },
+    geography: ["GB", "US"],
+    techStack: ["QuickBooks", "Xero", "Microsoft 365", "Slack"],
+    painPoints: [
+      "Manual invoice processing taking 15+ hours/week",
+      "Approval workflows via email chains",
+      "No visibility into outstanding AP",
+      "Month-end close delayed by AP bottlenecks",
+    ],
+    buyingTriggers: [
+      "Rapid growth increasing invoice volume",
+      "Audit findings on AP process controls",
+      "Key AP staff departure",
+      "CFO mandate to reduce processing costs",
+    ],
+    decisionMakers: ["Financial Controller", "CFO", "AP Manager"],
+    budgetRange: { min: 500, max: 3000, currency: "£" },
+  },
+];
+
+// ── Buyer Personas (Phase 5) ──
+export const SAMPLE_PERSONAS: BuyerPersona[] = [
+  {
+    id: "persona-001",
+    name: "Sarah the Financial Controller",
+    title: "Financial Controller",
+    department: "Finance",
+    seniority: "manager",
+    goals: [
+      "Reduce invoice processing time by 50%",
+      "Achieve 3-day close on AP",
+      "Improve spend visibility for the board",
+    ],
+    painPoints: [
+      "Drowning in manual matching and coding",
+      "Cannot get real-time AP reporting",
+      "Approval bottlenecks delay payments",
+    ],
+    objections: [
+      "Worried about data migration from current system",
+      "Needs QuickBooks/Xero integration to be seamless",
+      "Budget already tight this quarter",
+    ],
+    triggers: [
+      "Month-end close took 8 days last quarter",
+      "External audit flagged AP control weaknesses",
+      "Invoice volume doubled after acquisition",
+    ],
+    informationSources: ["LinkedIn", "AccountingWEB", "G2 Reviews", "ACCA webinars"],
+    decisionCriteria: [
+      "Ease of integration with existing accounting software",
+      "Price per user/month",
+      "Quality of customer support",
+      "Three-way matching capabilities",
+    ],
+    searchBehavior: [
+      "Searches 'AP automation software' during month-end crunch",
+      "Compares 'Bill.com vs Tipalti' when evaluating options",
+      "Looks for case studies from companies of similar size",
+      "Searches 'QuickBooks AP automation' when integration is priority",
+    ],
+    icpId: "icp-001",
+  },
+  {
+    id: "persona-002",
+    name: "David the CFO",
+    title: "Chief Financial Officer",
+    department: "Executive",
+    seniority: "c-suite",
+    goals: [
+      "Optimize working capital and cash flow",
+      "Reduce AP headcount costs",
+      "Gain real-time visibility into liabilities",
+    ],
+    painPoints: [
+      "Cannot get accurate AP aging report on demand",
+      "Finance team spending too much time on low-value work",
+      "Supplier relationships strained by late payments",
+    ],
+    objections: [
+      "ROI needs to be provable within 6 months",
+      "Board needs to approve any new software spend",
+      "Security and compliance concerns",
+    ],
+    triggers: [
+      "Board asked for digital transformation plan",
+      "Competitor announced faster payment terms",
+      "Late payment penalties exceeded £10K last quarter",
+    ],
+    informationSources: ["CFO.com", "LinkedIn", "Board peer networks", "Gartner reports"],
+    decisionCriteria: [
+      "Clear ROI within 6 months",
+      "Enterprise-grade security (SOC 2)",
+      "Scalability for growth",
+      "Executive dashboard and reporting",
+    ],
+    searchBehavior: [
+      "Searches 'AP automation ROI calculator' when building business case",
+      "Reads 'accounts payable best practices' articles",
+      "Searches '[competitor] alternative' when current tool frustrates",
+    ],
+    icpId: "icp-001",
+  },
+];
+
+// ── Audience Segments (Phase 5) ──
+export const SAMPLE_AUDIENCE_SEGMENTS: AudienceSegment[] = [
+  {
+    id: "seg-001",
+    name: "High-Intent AP Buyers",
+    description: "Finance leaders actively searching for AP automation solutions with transactional intent",
+    personaIds: ["persona-001", "persona-002"],
+    size: 12400,
+    searchKeywords: [
+      "accounts payable automation software",
+      "automate invoice processing",
+      "AP automation QuickBooks",
+      "Bill.com alternative",
+    ],
+    contentTopics: [
+      "AP automation ROI",
+      "Invoice processing benchmarks",
+      "AP best practices",
+      "Accounting software integration",
+    ],
+  },
+  {
+    id: "seg-002",
+    name: "Research-Phase Prospects",
+    description: "Finance professionals researching AP efficiency improvements, not yet solution-aware",
+    personaIds: ["persona-001"],
+    size: 34800,
+    searchKeywords: [
+      "reduce invoice processing time",
+      "AP workflow best practices",
+      "accounts payable KPIs",
+      "three way matching process",
+    ],
+    contentTopics: [
+      "AP process improvement",
+      "Invoice processing benchmarks",
+      "Finance team productivity",
+      "Month-end close optimization",
+    ],
+  },
+];
+
+// ── Campaign Timeline (Phase 6) ──
+export const SAMPLE_TIMELINE: CampaignTimeline = {
+  id: "tl-001",
+  name: "Nexus AP — International Launch 2026",
+  startDate: "2026-03-01",
+  endDate: "2026-12-31",
+  totalBudget: 120000,
+  phases: [
+    {
+      id: "phase-001",
+      name: "UK Market Launch",
+      gate: "awareness",
+      startDate: "2026-03-01",
+      endDate: "2026-05-31",
+      color: COLORS.accent,
+      markets: ["GB"],
+      channels: ["google-ads", "bing-ads"],
+      campaignIds: ["cmp-001"],
+      monthlyBudget: 3000,
+      milestones: [
+        { id: "ms-001", name: "Campaign launch", date: "2026-03-01", type: "launch", completed: false, notes: "Initial Google Ads + Bing Ads campaigns go live" },
+        { id: "ms-002", name: "First review", date: "2026-03-15", type: "review", completed: false, notes: "Assess initial CPC, CTR, and quality scores" },
+        { id: "ms-003", name: "Ad copy A/B test", date: "2026-04-01", type: "test", completed: false, notes: "Test headline variants for top 5 ad groups" },
+      ],
+      seasonalAdjustments: [
+        { month: 3, budgetMultiplier: 1.0, reason: "Launch month" },
+        { month: 4, budgetMultiplier: 1.0, reason: "Steady state" },
+        { month: 5, budgetMultiplier: 1.2, reason: "Pre-Q2 financial year end push" },
+      ],
+    },
+    {
+      id: "phase-002",
+      name: "UK Conversion Push",
+      gate: "conversion",
+      startDate: "2026-06-01",
+      endDate: "2026-08-31",
+      color: COLORS.green,
+      markets: ["GB"],
+      channels: ["google-ads", "bing-ads"],
+      campaignIds: ["cmp-001"],
+      monthlyBudget: 5000,
+      milestones: [
+        { id: "ms-004", name: "Conversion optimization", date: "2026-06-01", type: "optimization", completed: false, notes: "Focus on high-converting keywords, pause underperformers" },
+        { id: "ms-005", name: "Landing page test", date: "2026-07-01", type: "test", completed: false, notes: "A/B test pricing page vs feature page as landing" },
+      ],
+      seasonalAdjustments: [
+        { month: 6, budgetMultiplier: 1.0, reason: "Steady state" },
+        { month: 7, budgetMultiplier: 0.8, reason: "Summer slowdown" },
+        { month: 8, budgetMultiplier: 0.8, reason: "Summer slowdown" },
+      ],
+    },
+    {
+      id: "phase-003",
+      name: "US Market Entry",
+      gate: "awareness",
+      startDate: "2026-06-01",
+      endDate: "2026-09-30",
+      color: COLORS.amber,
+      markets: ["US"],
+      channels: ["google-ads"],
+      campaignIds: [],
+      monthlyBudget: 8000,
+      milestones: [
+        { id: "ms-006", name: "US campaign launch", date: "2026-06-01", type: "launch", completed: false, notes: "Launch US Google Ads campaigns" },
+        { id: "ms-007", name: "Market review", date: "2026-07-15", type: "review", completed: false, notes: "Assess US market performance vs UK benchmarks" },
+        { id: "ms-008", name: "Add Bing Ads", date: "2026-08-01", type: "expansion", completed: false, notes: "Expand to Bing if Google metrics are positive" },
+      ],
+      seasonalAdjustments: [
+        { month: 6, budgetMultiplier: 1.0, reason: "Launch" },
+        { month: 7, budgetMultiplier: 1.0, reason: "Ramp up" },
+        { month: 8, budgetMultiplier: 0.9, reason: "Summer" },
+        { month: 9, budgetMultiplier: 1.2, reason: "Fall budget season" },
+      ],
+    },
+    {
+      id: "phase-004",
+      name: "DACH Expansion",
+      gate: "consideration",
+      startDate: "2026-09-01",
+      endDate: "2026-12-31",
+      color: COLORS.purple,
+      markets: ["DE"],
+      channels: ["google-ads"],
+      campaignIds: [],
+      monthlyBudget: 4000,
+      milestones: [
+        { id: "ms-009", name: "German campaign launch", date: "2026-09-01", type: "launch", completed: false, notes: "Launch German-language Google Ads" },
+        { id: "ms-010", name: "Q4 optimization", date: "2026-11-01", type: "optimization", completed: false, notes: "Push budget for year-end purchasing decisions" },
+      ],
+      seasonalAdjustments: [
+        { month: 9, budgetMultiplier: 1.0, reason: "Launch" },
+        { month: 10, budgetMultiplier: 1.3, reason: "Q4 push" },
+        { month: 11, budgetMultiplier: 1.5, reason: "Q4 peak — year-end budgets" },
+        { month: 12, budgetMultiplier: 1.5, reason: "Q4 peak — year-end budgets" },
+      ],
+    },
+  ],
+};
 
 export const SAMPLE_PRODUCTS = [
   { name: "Nexus AP", description: "Accounts payable automation suite for SMBs", acv: "£588-2,400", target: "Financial Controllers, AP Managers", integrations: "QuickBooks, Xero" },

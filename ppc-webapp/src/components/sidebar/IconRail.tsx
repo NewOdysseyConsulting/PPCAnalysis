@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageSquare, Hash, Bookmark, Target, Briefcase, Key, PanelRightOpen, PanelRightClose, Command } from "lucide-react";
+import { MessageSquare, Hash, Bookmark, Target, Briefcase, Users, Key, PanelRightOpen, PanelRightClose, Command } from "lucide-react";
 import { COLORS, COUNTRY_MARKETS } from "../../constants";
 
 interface IconRailProps {
@@ -51,6 +51,7 @@ export const IconRail: React.FC<IconRailProps> = ({
         { icon: Bookmark, tab: "groups", label: "Groups" },
         { icon: Target, tab: "campaigns", label: "Campaigns" },
         { icon: Briefcase, tab: "products", label: "Products" },
+        { icon: Users, tab: "audience", label: "Audience" },
       ].map(({ icon: Icon, tab, label }) => (
         <button
           key={tab}

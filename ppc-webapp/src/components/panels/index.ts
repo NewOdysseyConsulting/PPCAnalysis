@@ -10,3 +10,6 @@ export { default as BudgetPanel } from "./BudgetPanel";
 export { default as RevenuePanel } from "./RevenuePanel";
 export { default as ProductPanel } from "./ProductPanel";
 export { default as CampaignBuilderPanel } from "./CampaignBuilderPanel";
+export { default as BudgetAllocatorPanel } from "./BudgetAllocatorPanel";
+export { default as AudiencePanel } from "./AudiencePanel";
+export { default as TimelinePanel } from "./TimelinePanel";
