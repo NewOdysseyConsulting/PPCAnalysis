@@ -7,18 +7,35 @@ import {
   generateIcpProfile,
   generateBuyerPersona,
 } from "../services/ai.ts";
+import { getHistory } from "../services/chatHistory.ts";
 
 const router = Router();
 
 // POST /api/ai/chat
 router.post("/chat", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { message, history, context } = req.body;
+    const { message, history, context, sessionId, productId } = req.body;
     if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "message (string) is required" });
     }
-    const result = await chatWithAssistant(message, history || [], context || {});
+    const result = await chatWithAssistant(message, history || [], context || {}, {
+      sessionId,
+      productId,
+    });
     res.json({ result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/ai/chat/history
+router.get("/chat/history", (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = req.query.sessionId as string | undefined;
+    const productId = req.query.productId as string | undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+    const messages = getHistory({ sessionId, productId, limit });
+    res.json({ result: messages });
   } catch (err) {
     next(err);
   }

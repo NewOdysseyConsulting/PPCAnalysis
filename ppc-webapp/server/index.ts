@@ -6,6 +6,9 @@ import stripeRouter from "./routes/stripe.ts";
 import seoRouter from "./routes/seo.ts";
 import aiRouter from "./routes/ai.ts";
 import budgetRouter from "./routes/budget.ts";
+import onboardingRouter from "./routes/onboarding.ts";
+import knowledgeRouter from "./routes/knowledge.ts";
+import { initDb, closeDb } from "./services/db.ts";
 
 interface ApiError extends Error {
   status?: number;
@@ -29,6 +32,8 @@ app.use("/api/stripe", stripeRouter);
 app.use("/api/seo", seoRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/budget", budgetRouter);
+app.use("/api/onboarding", onboardingRouter);
+app.use("/api/knowledge", knowledgeRouter);
 
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -40,11 +45,21 @@ app.use((err: ApiError, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`Orion API server running on http://localhost:${PORT}`);
-  if (process.env.DATAFORSEO_LOGIN) {
-    console.log("DataForSEO credentials loaded from environment");
-  } else {
-    console.log("No DataForSEO env credentials — pass via x-dfs-login / x-dfs-password headers");
-  }
+// Initialize database and start server
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Orion API server running on http://localhost:${PORT}`);
+    if (process.env.DATAFORSEO_LOGIN) {
+      console.log("DataForSEO credentials loaded from environment");
+    } else {
+      console.log("No DataForSEO env credentials — pass via x-dfs-login / x-dfs-password headers");
+    }
+  });
+}).catch((err) => {
+  console.error("[DB] Failed to initialize database:", err);
+  process.exit(1);
 });
+
+// Graceful shutdown
+process.on("SIGINT", () => { closeDb().then(() => process.exit(0)); });
+process.on("SIGTERM", () => { closeDb().then(() => process.exit(0)); });

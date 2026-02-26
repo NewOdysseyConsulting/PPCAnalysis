@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, Table2, GitCompare, BarChart3, Target, DollarSign, TrendingUp, Search, ExternalLink, Activity, Zap, Bot, User, SlidersHorizontal, Calendar, Users } from "lucide-react";
+import { Send, Table2, GitCompare, BarChart3, Target, DollarSign, TrendingUp, Search, ExternalLink, Activity, Zap, Bot, User, SlidersHorizontal, Calendar, Users, Briefcase } from "lucide-react";
 import { COLORS } from "../../constants";
 
 interface ChatTabProps {
@@ -50,9 +50,9 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         }}>{market.flag} {market.code}</span>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 4 }}>
-          {["table", "competitor", "visual", "campaign", "budget", "allocator", "revenue", "seo", "backlinks", "gsc", "ga", "audience", "timeline"].map(mode => {
-            const icons: Record<string, any> = { table: Table2, competitor: GitCompare, visual: BarChart3, campaign: Target, budget: DollarSign, allocator: SlidersHorizontal, revenue: TrendingUp, seo: Search, backlinks: ExternalLink, gsc: Search, ga: Activity, audience: Users, timeline: Calendar };
-            const labels: Record<string, string> = { table: "Table", competitor: "Competitor", visual: "Visual", campaign: "Campaign", budget: "Budget", allocator: "Allocator", revenue: "Revenue", seo: "SEO", backlinks: "Backlinks", gsc: "GSC", ga: "GA", audience: "Audience", timeline: "Timeline" };
+          {["table", "competitor", "visual", "campaign", "budget", "allocator", "revenue", "seo", "backlinks", "gsc", "ga", "audience", "timeline", "portfolio"].map(mode => {
+            const icons: Record<string, any> = { table: Table2, competitor: GitCompare, visual: BarChart3, campaign: Target, budget: DollarSign, allocator: SlidersHorizontal, revenue: TrendingUp, seo: Search, backlinks: ExternalLink, gsc: Search, ga: Activity, audience: Users, timeline: Calendar, portfolio: Briefcase };
+            const labels: Record<string, string> = { table: "Table", competitor: "Competitor", visual: "Visual", campaign: "Campaign", budget: "Budget", allocator: "Allocator", revenue: "Revenue", seo: "SEO", backlinks: "Backlinks", gsc: "GSC", ga: "GA", audience: "Audience", timeline: "Timeline", portfolio: "Portfolio" };
             const Icon = icons[mode];
             return (
               <button

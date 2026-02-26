@@ -6,3 +6,7 @@ export { ProductsTab } from "./ProductsTab";
 export { IconRail } from "./IconRail";
 export { ApiSettingsPanel } from "./ApiSettingsPanel";
 export { AudienceTab } from "./AudienceTab";
+export { ProductSwitcher } from "./ProductSwitcher";
+export { ProductFormModal } from "./ProductFormModal";
+export { ProductOnboardingWizard } from "./ProductOnboardingWizard";
+export { KnowledgeTab } from "./KnowledgeTab";

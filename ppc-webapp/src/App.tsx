@@ -10,82 +10,134 @@ import { sendChatMessage, generateIcp, generatePersona } from "./services/ai";
 import type { Campaign, ChannelConfig, IcpProfile, BuyerPersona, AudienceSegment, CampaignTimeline } from "./types";
 import { COLORS } from "./constants";
 import { Sparkline, IntentBadge, MetricChip } from "./components/ui";
-import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_PRODUCTS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES, SAMPLE_CHANNEL_CONFIGS, SAMPLE_ICP, SAMPLE_PERSONAS, SAMPLE_AUDIENCE_SEGMENTS, SAMPLE_TIMELINE } from "./constants";
-import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel, BudgetAllocatorPanel, AudiencePanel, TimelinePanel } from "./components/panels";
-import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel, AudienceTab } from "./components/sidebar";
+import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES, SAMPLE_CHANNEL_CONFIGS, SAMPLE_ICP, SAMPLE_PERSONAS, SAMPLE_AUDIENCE_SEGMENTS, SAMPLE_TIMELINE, PRODUCT1_INFO, PRODUCT2_INFO, PRODUCT2_KEYWORDS, PRODUCT2_CAMPAIGNS, PRODUCT2_CHANNEL_CONFIGS, PRODUCT2_ICP, PRODUCT2_PERSONAS, PRODUCT2_AUDIENCE_SEGMENTS, PRODUCT2_TIMELINE, PRODUCT2_SEED_KEYWORDS, PRODUCT2_SAVED_GROUPS } from "./constants";
+import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel, BudgetAllocatorPanel, AudiencePanel, TimelinePanel, PortfolioPanel } from "./components/panels";
+import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel, AudienceTab, ProductFormModal, ProductOnboardingWizard, KnowledgeTab } from "./components/sidebar";
+import usePortfolioState from "./hooks/usePortfolioState";
+
+// ── Initial portfolio data ──
+const PRODUCT1_SEEDS = [
+  { id: 1, keyword: "accounts payable automation", source: "manual", addedAt: new Date(Date.now() - 86400000 * 5), status: "researched" },
+  { id: 2, keyword: "invoice processing software", source: "manual", addedAt: new Date(Date.now() - 86400000 * 5), status: "researched" },
+  { id: 3, keyword: "AP automation QuickBooks", source: "ai-suggested", addedAt: new Date(Date.now() - 86400000 * 3), status: "researched" },
+  { id: 4, keyword: "supplier payment automation", source: "competitor", addedAt: new Date(Date.now() - 86400000 * 2), status: "researched" },
+  { id: 5, keyword: "Bill.com alternative", source: "manual", addedAt: new Date(Date.now() - 86400000 * 2), status: "researched" },
+  { id: 6, keyword: "Tipalti alternative small business", source: "ai-suggested", addedAt: new Date(Date.now() - 86400000 * 1), status: "researched" },
+  { id: 7, keyword: "purchase order automation", source: "manual", addedAt: new Date(Date.now() - 86400000 * 1), status: "pending" },
+  { id: 8, keyword: "automated vendor payments", source: "manual", addedAt: new Date(), status: "pending" },
+];
+const PRODUCT1_GROUPS = [
+  { id: 1, name: "High Opportunity — UK AP", description: "Low competition, transactional intent, volume >150", createdAt: new Date(Date.now() - 86400000 * 3), color: COLORS.amber, keywords: SAMPLE_KEYWORDS.filter((k: any) => k.group === "high-opportunity") },
+  { id: 2, name: "Competitor Alternatives", description: "Bill.com and Tipalti alternative keywords", createdAt: new Date(Date.now() - 86400000 * 2), color: COLORS.red, keywords: SAMPLE_KEYWORDS.filter((k: any) => k.group === "competitor") },
+  { id: 3, name: "Invoice Processing Cluster", description: "All invoice-related keywords with commercial intent", createdAt: new Date(Date.now() - 86400000 * 1), color: COLORS.accent, keywords: SAMPLE_KEYWORDS.filter((k: any) => k.keyword.includes("invoice")) },
+];
+const INITIAL_PRODUCTS = [PRODUCT1_INFO, PRODUCT2_INFO];
+const INITIAL_PRODUCT_DATA: Record<string, any> = {
+  [PRODUCT1_INFO.id]: {
+    keywords: SAMPLE_KEYWORDS, liveKeywords: {}, campaigns: SAMPLE_CAMPAIGNS,
+    channelConfigs: SAMPLE_CHANNEL_CONFIGS, icpProfiles: SAMPLE_ICP,
+    buyerPersonas: SAMPLE_PERSONAS, audienceSegments: SAMPLE_AUDIENCE_SEGMENTS,
+    timeline: SAMPLE_TIMELINE, budgetMonthly: 1000,
+    seedKeywords: PRODUCT1_SEEDS, savedGroups: PRODUCT1_GROUPS,
+    bingData: {}, liveCompetitors: {}, liveGaps: [],
+  },
+  [PRODUCT2_INFO.id]: {
+    keywords: PRODUCT2_KEYWORDS, liveKeywords: {}, campaigns: PRODUCT2_CAMPAIGNS,
+    channelConfigs: PRODUCT2_CHANNEL_CONFIGS, icpProfiles: PRODUCT2_ICP,
+    buyerPersonas: PRODUCT2_PERSONAS, audienceSegments: PRODUCT2_AUDIENCE_SEGMENTS,
+    timeline: PRODUCT2_TIMELINE, budgetMonthly: 1200,
+    seedKeywords: PRODUCT2_SEED_KEYWORDS, savedGroups: PRODUCT2_SAVED_GROUPS,
+    bingData: {}, liveCompetitors: {}, liveGaps: [],
+  },
+};
 
 // ════════════════════════════════════════════════════════════════
 // MAIN APP
 // ════════════════════════════════════════════════════════════════
 export default function OrionApp() {
+  // ── Portfolio state (product-scoped data) ──
+  const {
+    products, activeProductId, activeProduct, setActiveProductId,
+    activeData, updateActiveData, updateActiveDataFn,
+    portfolioData,
+    addProduct, updateProduct, deleteProduct, duplicateProduct,
+  } = usePortfolioState({
+    initialProducts: INITIAL_PRODUCTS as any,
+    initialProductData: INITIAL_PRODUCT_DATA,
+  });
+
+  // Destructure active product data
+  const {
+    keywords, liveKeywords, campaigns, channelConfigs,
+    icpProfiles, buyerPersonas, audienceSegments, timeline,
+    budgetMonthly, seedKeywords, savedGroups, bingData,
+    liveCompetitors, liveGaps,
+  } = activeData;
+
+  // Wrapper setters for product-scoped data (support functional updates)
+  const setLiveKeywords = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ liveKeywords: v(c.liveKeywords) }))
+    : updateActiveData({ liveKeywords: v }), [updateActiveData, updateActiveDataFn]);
+  const setCampaigns = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ campaigns: v(c.campaigns) }))
+    : updateActiveData({ campaigns: v }), [updateActiveData, updateActiveDataFn]);
+  const setChannelConfigs = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ channelConfigs: v(c.channelConfigs) }))
+    : updateActiveData({ channelConfigs: v }), [updateActiveData, updateActiveDataFn]);
+  const setIcpProfiles = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ icpProfiles: v(c.icpProfiles) }))
+    : updateActiveData({ icpProfiles: v }), [updateActiveData, updateActiveDataFn]);
+  const setBuyerPersonas = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ buyerPersonas: v(c.buyerPersonas) }))
+    : updateActiveData({ buyerPersonas: v }), [updateActiveData, updateActiveDataFn]);
+  const setAudienceSegments = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ audienceSegments: v(c.audienceSegments) }))
+    : updateActiveData({ audienceSegments: v }), [updateActiveData, updateActiveDataFn]);
+  const setTimeline = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ timeline: v(c.timeline) }))
+    : updateActiveData({ timeline: v }), [updateActiveData, updateActiveDataFn]);
+  const setBudgetMonthly = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ budgetMonthly: v(c.budgetMonthly) }))
+    : updateActiveData({ budgetMonthly: v }), [updateActiveData, updateActiveDataFn]);
+  const setSeedKeywords = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ seedKeywords: v(c.seedKeywords) }))
+    : updateActiveData({ seedKeywords: v }), [updateActiveData, updateActiveDataFn]);
+  const setLiveCompetitors = useCallback((v: any) => updateActiveData({ liveCompetitors: v }), [updateActiveData]);
+  const setLiveGaps = useCallback((v: any) => updateActiveData({ liveGaps: v }), [updateActiveData]);
+  const setBingData = useCallback((v: any) => updateActiveData({ bingData: v }), [updateActiveData]);
+
+  // ── Non-product-scoped state ──
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [inputValue, setInputValue] = useState("");
   const [targetCountry, setTargetCountry] = useState("GB");
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-  const [panelMode, setPanelMode] = useState("table"); // table | competitor | visual | campaign | product | gsc | ga
+  const [panelMode, setPanelMode] = useState("table");
   const [panelOpen, setPanelOpen] = useState(true);
-  const [keywords, setKeywords] = useState(SAMPLE_KEYWORDS);
   const [selectedKeywords, setSelectedKeywords] = useState(new Set());
   const [sortCol, setSortCol] = useState("relevance");
   const [sortDir, setSortDir] = useState("desc");
   const [activeFilters, setActiveFilters] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [campaigns, setCampaigns] = useState<Campaign[]>(SAMPLE_CAMPAIGNS);
   const [activeCampaign, setActiveCampaign] = useState(0);
   const [activeAdGroup, setActiveAdGroup] = useState(0);
   const [aiChatHistory, setAiChatHistory] = useState<{ role: string; content: string }[]>([]);
-  // Phase 3: Budget Allocator
-  const [channelConfigs, setChannelConfigs] = useState<ChannelConfig[]>(SAMPLE_CHANNEL_CONFIGS);
-  // Phase 5: Audience & Personas
-  const [icpProfiles, setIcpProfiles] = useState<IcpProfile[]>(SAMPLE_ICP);
-  const [buyerPersonas, setBuyerPersonas] = useState<BuyerPersona[]>(SAMPLE_PERSONAS);
-  const [audienceSegments, setAudienceSegments] = useState<AudienceSegment[]>(SAMPLE_AUDIENCE_SEGMENTS);
-  // Phase 6: Timeline
-  const [timeline, setTimeline] = useState<CampaignTimeline>(SAMPLE_TIMELINE);
-  const [sidebarTab, setSidebarTab] = useState("chat"); // chat | seeds | groups | campaigns | products | audience
-  const [products, setProducts] = useState(SAMPLE_PRODUCTS);
-  const [showProductInput, setShowProductInput] = useState(false);
-  const [seedKeywords, setSeedKeywords] = useState([
-    { id: 1, keyword: "accounts payable automation", source: "manual", addedAt: new Date(Date.now() - 86400000 * 5), status: "researched" },
-    { id: 2, keyword: "invoice processing software", source: "manual", addedAt: new Date(Date.now() - 86400000 * 5), status: "researched" },
-    { id: 3, keyword: "AP automation QuickBooks", source: "ai-suggested", addedAt: new Date(Date.now() - 86400000 * 3), status: "researched" },
-    { id: 4, keyword: "supplier payment automation", source: "competitor", addedAt: new Date(Date.now() - 86400000 * 2), status: "researched" },
-    { id: 5, keyword: "Bill.com alternative", source: "manual", addedAt: new Date(Date.now() - 86400000 * 2), status: "researched" },
-    { id: 6, keyword: "Tipalti alternative small business", source: "ai-suggested", addedAt: new Date(Date.now() - 86400000 * 1), status: "researched" },
-    { id: 7, keyword: "purchase order automation", source: "manual", addedAt: new Date(Date.now() - 86400000 * 1), status: "pending" },
-    { id: 8, keyword: "automated vendor payments", source: "manual", addedAt: new Date(), status: "pending" },
-  ]);
+  const [sidebarTab, setSidebarTab] = useState("chat");
+  const [sessionId] = useState(() => {
+    let id = sessionStorage.getItem("orion-session-id");
+    if (!id) { id = crypto.randomUUID(); sessionStorage.setItem("orion-session-id", id); }
+    return id;
+  });
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editProductData, setEditProductData] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [newSeedInput, setNewSeedInput] = useState("");
-  const [savedGroups, setSavedGroups] = useState([
-    {
-      id: 1, name: "High Opportunity — UK AP", description: "Low competition, transactional intent, volume >150",
-      createdAt: new Date(Date.now() - 86400000 * 3), color: COLORS.amber,
-      keywords: SAMPLE_KEYWORDS.filter(k => k.group === "high-opportunity"),
-    },
-    {
-      id: 2, name: "Competitor Alternatives", description: "Bill.com and Tipalti alternative keywords",
-      createdAt: new Date(Date.now() - 86400000 * 2), color: COLORS.red,
-      keywords: SAMPLE_KEYWORDS.filter(k => k.group === "competitor"),
-    },
-    {
-      id: 3, name: "Invoice Processing Cluster", description: "All invoice-related keywords with commercial intent",
-      createdAt: new Date(Date.now() - 86400000 * 1), color: COLORS.accent,
-      keywords: SAMPLE_KEYWORDS.filter(k => k.keyword.includes("invoice")),
-    },
-  ]);
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const [expandedCampaignSidebar, setExpandedCampaignSidebar] = useState(0);
-  const [editingProduct, setEditingProduct] = useState(null);
   const [apiCredentials, setApiCredentials] = useState({ login: "", password: "" });
   const [showApiSettings, setShowApiSettings] = useState(false);
   const [apiLoading, setApiLoading] = useState(false);
-  const [liveKeywords, setLiveKeywords] = useState({}); // { [countryCode]: keyword[] }
-  const [liveCompetitors, setLiveCompetitors] = useState<Record<string, any>>({});
-  const [liveGaps, setLiveGaps] = useState<any[]>([]);
   const [competitorLoading, setCompetitorLoading] = useState(false);
-  const [bingData, setBingData] = useState<Record<string, any>>({});  // { [keyword]: { volume, cpc, ... } }
   const [bingLoading, setBingLoading] = useState(false);
-  const [budgetMonthly, setBudgetMonthly] = useState(1000);
   const [budgetCtrOverride, setBudgetCtrOverride] = useState<number | null>(null);
   const [budgetConvRateOverride, setBudgetConvRateOverride] = useState<number | null>(null);
   const [budgetUseSelected, setBudgetUseSelected] = useState(false);
@@ -109,7 +161,7 @@ export default function OrionApp() {
 
   // ── Derived market data (live API data if available, else sample) ──
   const market = COUNTRY_MARKETS[targetCountry as keyof typeof COUNTRY_MARKETS];
-  const adjustedKeywords = (liveKeywords as Record<string, any>)[targetCountry] || market.keywords;
+  const adjustedKeywords = liveKeywords[targetCountry] || keywords;
   const adjustedGSC = market.gsc;
   const gaScale = market.ga.users / SAMPLE_GA_DATA.overview.users;
   const adjustedGA = {
@@ -290,7 +342,7 @@ export default function OrionApp() {
       );
 
       // Score relevance against active product + tag sources
-      const activeProduct = products[0] || null;
+      const currentProduct = activeProduct || null;
       const scored = volumeData
         .filter(kw => kw && kw.volume > 0)
         .map(kw => {
@@ -299,7 +351,7 @@ export default function OrionApp() {
           if (labsKeywordSet.has(kwLower)) sources.push("labs");
           return {
             ...kw,
-            relevance: scoreRelevance(kw, activeProduct),
+            relevance: scoreRelevance(kw, currentProduct),
             sources,
             source: labsKeywordSet.has(kwLower) ? "labs" : "google",
           };
@@ -307,7 +359,7 @@ export default function OrionApp() {
         .sort((a, b) => b.relevance - a.relevance);
 
       // Store in live data
-      setLiveKeywords(prev => ({ ...prev, [targetCountry]: scored }));
+      setLiveKeywords((prev: any) => ({ ...prev, [targetCountry]: scored }));
 
       const highOpp = scored.filter(k => k.competition < 0.2 && k.intent === "transactional");
 
@@ -327,7 +379,7 @@ export default function OrionApp() {
       setApiLoading(false);
       setIsTyping(false);
     }
-  }, [hasApiCredentials, targetCountry, apiCredentials, products, market]);
+  }, [hasApiCredentials, targetCountry, apiCredentials, activeProduct, market]);
 
   // ── Live competitor site research ──
   const handleSiteResearch = useCallback(async (domain: string) => {
@@ -341,10 +393,10 @@ export default function OrionApp() {
 
     try {
       const results = await getKeywordsForSite(domain, targetCountry, apiCredentials);
-      const activeProduct = products[0] || null;
+      const currentProduct = activeProduct || null;
       const scored = results
         .filter(kw => kw && kw.volume > 0)
-        .map(kw => ({ ...kw, relevance: scoreRelevance(kw, activeProduct), sources: ["site"], source: "site" }))
+        .map(kw => ({ ...kw, relevance: scoreRelevance(kw, currentProduct), sources: ["site"], source: "site" }))
         .sort((a, b) => b.volume - a.volume);
 
       setMessages(prev => [...prev, {
@@ -355,7 +407,7 @@ export default function OrionApp() {
       }]);
 
       // Merge with existing live keywords
-      setLiveKeywords(prev => {
+      setLiveKeywords((prev: any) => {
         const existing = (prev as Record<string, any>)[targetCountry] || [];
         const existingSet = new Set(existing.map((k: any) => k.keyword));
         const newKws = scored.filter(k => !existingSet.has(k.keyword));
@@ -371,7 +423,7 @@ export default function OrionApp() {
       setApiLoading(false);
       setIsTyping(false);
     }
-  }, [hasApiCredentials, targetCountry, apiCredentials, products, market]);
+  }, [hasApiCredentials, targetCountry, apiCredentials, activeProduct, market]);
 
   // ── Ad traffic projections ──
   const handleTrafficProjection = useCallback(async (kwList: string[], bid: number) => {
@@ -705,14 +757,14 @@ export default function OrionApp() {
   }, [adjustedKeywords, market.code]);
 
   const handleFetchSerpCompetitors = useCallback(async (domain?: string) => {
-    const target = domain || (products[0]?.name ? products[0].name.toLowerCase().replace(/\s+/g, "") + ".com" : "example.com");
+    const target = domain || (activeProduct?.name ? activeProduct.name.toLowerCase().replace(/\s+/g, "") + ".com" : "example.com");
     setSeoLoading("competitors");
     try {
       const results = await getSerpCompetitors(target, market.code);
       setSerpCompetitors(results);
     } catch (err) { console.error("SERP competitors error:", err); }
     setSeoLoading(null);
-  }, [market.code, products]);
+  }, [market.code, activeProduct]);
 
   const handleFetchRankHistory = useCallback(async (keywords?: string[]) => {
     const kws = keywords || adjustedKeywords.slice(0, 15).map((k: any) => k.keyword);
@@ -726,14 +778,14 @@ export default function OrionApp() {
   }, [adjustedKeywords, market.code]);
 
   const handleFetchBacklinks = useCallback(async (domain?: string) => {
-    const target = domain || (products[0]?.name ? products[0].name.toLowerCase().replace(/\s+/g, "") + ".com" : "example.com");
+    const target = domain || (activeProduct?.name ? activeProduct.name.toLowerCase().replace(/\s+/g, "") + ".com" : "example.com");
     setSeoLoading("backlinks");
     try {
       const result = await getBacklinkProfile(target);
       setBacklinkData(result);
     } catch (err) { console.error("Backlinks error:", err); }
     setSeoLoading(null);
-  }, [products]);
+  }, [activeProduct]);
 
   const handleFetchBacklinkComparison = useCallback(async (domains?: string[]) => {
     const targets = domains || SAMPLE_COMPETITORS.map((c: any) => c.domain).slice(0, 5);
@@ -829,7 +881,7 @@ export default function OrionApp() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setCampaigns(prev => [...prev, newCampaign]);
+    setCampaigns((prev: any) => [...prev, newCampaign]);
     setActiveCampaign(campaigns.length);
     setPanelMode("campaign");
     setPanelOpen(true);
@@ -837,11 +889,10 @@ export default function OrionApp() {
 
   // ── AI ICP/Persona generation handlers ──
   const handleGenerateIcp = useCallback(async () => {
-    const product = products[0];
-    if (!product) return;
+    if (!activeProduct) return;
     try {
       const result = await generateIcp(
-        { name: product.name, description: product.description, acv: product.acv, target: product.target },
+        { name: activeProduct.name, description: activeProduct.description, acv: activeProduct.acv, target: activeProduct.target },
         market.code,
         icpProfiles.map(p => p.name)
       );
@@ -849,18 +900,17 @@ export default function OrionApp() {
         id: crypto.randomUUID(),
         ...result,
       };
-      setIcpProfiles(prev => [...prev, newIcp]);
+      setIcpProfiles((prev: any) => [...prev, newIcp]);
     } catch (err) {
       console.error("ICP generation error:", err);
     }
-  }, [products, market.code, icpProfiles]);
+  }, [activeProduct, market.code, icpProfiles, setIcpProfiles]);
 
   const handleGeneratePersona = useCallback(async () => {
-    const product = products[0];
-    if (!product) return;
+    if (!activeProduct) return;
     try {
       const result = await generatePersona(
-        { name: product.name, description: product.description, acv: product.acv, target: product.target },
+        { name: activeProduct.name, description: activeProduct.description, acv: activeProduct.acv, target: activeProduct.target },
         market.code,
         icpProfiles[0]?.name,
         buyerPersonas.map(p => p.name)
@@ -871,11 +921,11 @@ export default function OrionApp() {
         ...result,
         seniority: (['c-suite', 'director', 'manager', 'individual-contributor'].includes(result.seniority) ? result.seniority : 'manager') as BuyerPersona['seniority'],
       };
-      setBuyerPersonas(prev => [...prev, newPersona]);
+      setBuyerPersonas((prev: any) => [...prev, newPersona]);
     } catch (err) {
       console.error("Persona generation error:", err);
     }
-  }, [products, market.code, icpProfiles, buyerPersonas]);
+  }, [activeProduct, market.code, icpProfiles, buyerPersonas, setBuyerPersonas]);
 
   // ── Chat send handler (must be after API handlers) ──
   const handleSend = useCallback(() => {
@@ -998,15 +1048,15 @@ export default function OrionApp() {
 
     // ── AI Chat — send to backend LLM ──
     const context = {
-      product: products[0] ? { name: products[0].name, description: products[0].description, acv: products[0].acv, target: products[0].target } : undefined,
+      product: activeProduct ? { name: activeProduct.name, description: activeProduct.description, acv: activeProduct.acv, target: activeProduct.target } : undefined,
       keywordsSummary: { count: mergedKeywords.length, avgCpc: parseFloat(avgCpc), topKeywords: mergedKeywords.slice(0, 5).map((k: any) => k.keyword) },
-      campaignsSummary: { count: campaigns.length, totalKeywords: campaigns.reduce((a, c) => a + c.adGroups.reduce((b, g) => b + g.keywords.length, 0), 0) },
+      campaignsSummary: { count: campaigns.length, totalKeywords: campaigns.reduce((a: number, c: any) => a + c.adGroups.reduce((b: number, g: any) => b + g.keywords.length, 0), 0) },
       market: { code: market.code, name: market.name, currency: market.currency },
       budgetMonthly,
     };
     const history = aiChatHistory.slice(-10);
 
-    sendChatMessage(inputValue, history, context)
+    sendChatMessage(inputValue, history, context, { sessionId, productId: activeProductId })
       .then(result => {
         setIsTyping(false);
         const aiMsg = {
@@ -1053,6 +1103,9 @@ export default function OrionApp() {
         market={market}
         panelOpen={panelOpen}
         setPanelOpen={setPanelOpen}
+        products={products}
+        activeProductId={activeProductId}
+        setActiveProductId={setActiveProductId}
       />
 
       {/* ═══ API SETTINGS PANEL ═══ */}
@@ -1136,8 +1189,14 @@ export default function OrionApp() {
         {sidebarTab === "products" && (
           <ProductsTab
             products={products}
+            activeProductId={activeProductId}
+            setActiveProductId={setActiveProductId}
             setPanelMode={setPanelMode}
             setPanelOpen={setPanelOpen}
+            onAddProduct={() => setShowOnboarding(true)}
+            onEditProduct={(prod) => { setEditProductData(prod); setShowProductForm(true); }}
+            onDuplicateProduct={duplicateProduct}
+            onDeleteProduct={deleteProduct}
           />
         )}
 
@@ -1149,6 +1208,13 @@ export default function OrionApp() {
             audienceSegments={audienceSegments}
             setPanelMode={setPanelMode}
             setPanelOpen={setPanelOpen}
+          />
+        )}
+
+        {sidebarTab === "knowledge" && (
+          <KnowledgeTab
+            activeProductId={activeProductId}
+            keywords={mergedKeywords}
           />
         )}
 
@@ -1164,7 +1230,7 @@ export default function OrionApp() {
             display: "flex", alignItems: "center", padding: "0 16px", gap: 10,
           }}>
             <span style={{ fontWeight: 600, fontSize: 13 }}>
-              {{ table: "Keyword Explorer", competitor: "Competitor Matrix", visual: "Opportunity Map", campaign: "Campaign Builder", budget: "Budget Planner", allocator: "Budget Allocator", revenue: "Revenue & Stripe", seo: "SEO Intelligence", backlinks: "Backlink Analysis", product: "Product Profiles", gsc: "Search Console", ga: "Analytics", audience: "Audience & Personas", timeline: "Campaign Timeline" }[panelMode]}
+              {{ table: "Keyword Explorer", competitor: "Competitor Matrix", visual: "Opportunity Map", campaign: "Campaign Builder", budget: "Budget Planner", allocator: "Budget Allocator", revenue: "Revenue & Stripe", seo: "SEO Intelligence", backlinks: "Backlink Analysis", product: "Product Profiles", gsc: "Search Console", ga: "Analytics", audience: "Audience & Personas", timeline: "Campaign Timeline", portfolio: "Portfolio Dashboard" }[panelMode]}
             </span>
             <div style={{ flex: 1 }} />
 
@@ -1409,8 +1475,79 @@ export default function OrionApp() {
             />
           )}
 
+          {/* ── PORTFOLIO DASHBOARD MODE ── */}
+          {panelMode === "portfolio" && (
+            <PortfolioPanel
+              products={products}
+              activeProductId={activeProductId}
+              setActiveProductId={setActiveProductId}
+              portfolioData={portfolioData}
+              market={market}
+              setPanelMode={setPanelMode}
+              setPanelOpen={setPanelOpen}
+            />
+          )}
+
         </div>
       )}
+
+      {/* ═══ PRODUCT FORM MODAL ═══ */}
+      <ProductFormModal
+        isOpen={showProductForm}
+        onClose={() => setShowProductForm(false)}
+        editProduct={editProductData}
+        onSave={(productData) => {
+          if (editProductData) {
+            updateProduct(productData.id, productData);
+          } else {
+            addProduct({
+              ...productData,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            } as any);
+          }
+        }}
+      />
+
+      {/* ═══ PRODUCT ONBOARDING WIZARD ═══ */}
+      <ProductOnboardingWizard
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={(result) => {
+          const now = new Date().toISOString();
+          addProduct({
+            id: result.id,
+            name: result.name,
+            description: result.description,
+            acv: result.acv,
+            target: result.target,
+            integrations: result.integrations,
+            websiteUrl: result.websiteUrl,
+            createdAt: now,
+            updatedAt: now,
+          } as any, {
+            keywords: result.keywords.map((kw: string, i: number) => ({
+              keyword: kw,
+              volume: 0,
+              cpc: 0,
+              cpcLow: 0,
+              cpcHigh: 0,
+              competition: 0,
+              competitionLabel: "unknown",
+              difficulty: 0,
+              intent: "commercial" as const,
+              trend: null,
+              monthlySearches: [],
+              relevance: 80 - i,
+              group: null,
+              spell: null,
+              locationCode: undefined,
+              languageCode: undefined,
+            })),
+          });
+          setShowOnboarding(false);
+        }}
+      />
 
       {/* Animation keyframes */}
       <style>{`

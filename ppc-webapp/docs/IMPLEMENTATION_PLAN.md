@@ -17,9 +17,10 @@ Phase 3 (Budget Allocator)  ── depends on Phase 2 types (Campaign) ✅ DONE
 Phase 4 (AI Assistant)      ── no dependencies ✅ DONE
 Phase 5 (Audience/Persona)  ── depends on Phase 2 + Phase 4 ✅ DONE
 Phase 6 (Timeline/Roadmap)  ── depends on Phase 2 + Phase 3 ✅ DONE
+Phase 7 (Multi-Product)     ── depends on all phases ✅ DONE
 ```
 
-All 6 phases are complete.
+All 7 phases are complete.
 
 ---
 
@@ -317,6 +318,22 @@ No backend — timeline data is client-side state.
 
 ---
 
+## Phase 7: Multi-Product Portfolio ✅ DONE
+
+**Complexity:** High | **Dependencies:** All previous phases
+
+### Delivered
+- `src/hooks/usePortfolioState.ts` — Custom useReducer hook encapsulating all product-scoped state (keywords, campaigns, channels, ICP, personas, segments, timeline, budget, seeds, groups, Bing data, competitors, gaps). 7 action types including functional updates. Replaces ~15 useState calls in App.tsx.
+- `src/components/panels/PortfolioPanel.tsx` — Portfolio dashboard with summary cards (products, budget, keywords, ROAS), sortable product performance table, budget allocation chart, top opportunities with recommendations, quick actions grid.
+- `src/components/sidebar/ProductSwitcher.tsx` — Compact dropdown product selector with letter circle, positioned dropdown, click-outside close. Replaces the logo in the icon rail.
+- `src/components/sidebar/ProductFormModal.tsx` — Full-screen overlay modal for product create/edit with 6 form fields (name, description, ACV, target, integrations, website URL).
+- `src/constants/sampleProduct2.ts` — Second sample product "Orion CRM" with complete data: 15 CRM keywords, 1 campaign with 3 ad groups, channel configs, ICP, 2 personas, audience segment, timeline with 2 phases, seed keywords, saved groups.
+- Product switching scopes all data per product (keywords, campaigns, budget, audience, timeline)
+- Portfolio dashboard shows cross-product aggregate metrics
+- Full product CRUD: create, edit, duplicate, delete (with last-product protection)
+
+---
+
 ## All New Files Summary
 
 | Phase | File | Purpose |
@@ -333,6 +350,11 @@ No backend — timeline data is client-side state.
 | 5 | `src/components/panels/AudiencePanel.tsx` | ICP, persona, segment builder |
 | 5 | `src/components/sidebar/AudienceTab.tsx` | Audience sidebar summary |
 | 6 | `src/components/panels/TimelinePanel.tsx` | Gantt-style campaign roadmap |
+| 7 ✅ | `src/hooks/usePortfolioState.ts` | Product-scoped state management hook |
+| 7 ✅ | `src/components/panels/PortfolioPanel.tsx` | Portfolio dashboard |
+| 7 ✅ | `src/components/sidebar/ProductSwitcher.tsx` | Product selector dropdown |
+| 7 ✅ | `src/components/sidebar/ProductFormModal.tsx` | Product create/edit modal |
+| 7 ✅ | `src/constants/sampleProduct2.ts` | Orion CRM sample data |
 
 ## All Modified Files Summary
 
@@ -347,3 +369,10 @@ No backend — timeline data is client-side state.
 | `src/components/sidebar/IconRail.tsx` | 5 | Audience tab button |
 | `src/components/sidebar/CampaignsTab.tsx` | 1,2 | Wire export + CRUD handlers |
 | `server/index.ts` | 3 | Register budget router |
+| `src/App.tsx` | 7 | Replaced ~15 useState with usePortfolioState hook, added PortfolioPanel/ProductFormModal renders |
+| `src/components/sidebar/IconRail.tsx` | 7 | Replaced logo with ProductSwitcher |
+| `src/components/sidebar/ProductsTab.tsx` | 7 | Added active product highlighting, CRUD buttons |
+| `src/components/sidebar/ChatTab.tsx` | 7 | Added portfolio panel mode button |
+| `src/components/panels/index.ts` | 7 | Export PortfolioPanel |
+| `src/components/sidebar/index.ts` | 7 | Export ProductSwitcher, ProductFormModal |
+| `src/constants/index.ts` | 7 | Export sampleProduct2 constants |

@@ -13,6 +13,7 @@ export interface ChatResponse {
     panel?: string;
     payload?: any;
   };
+  sources?: { url: string; snippet: string }[];
 }
 
 export interface ContentBrief {
@@ -59,9 +60,23 @@ async function apiCall(endpoint: string, options: { method?: string; body?: unkn
 export async function sendChatMessage(
   message: string,
   history?: { role: string; content: string }[],
-  context?: any
+  context?: any,
+  options?: { sessionId?: string; productId?: string }
 ): Promise<ChatResponse> {
-  const data = await apiCall("/chat", { body: { message, history, context } });
+  const data = await apiCall("/chat", {
+    body: { message, history, context, ...options },
+  });
+  return data.result;
+}
+
+export async function getChatHistory(
+  params: { sessionId?: string; productId?: string; limit?: number } = {}
+): Promise<{ id: number; role: string; content: string; createdAt: string }[]> {
+  const query = new URLSearchParams();
+  if (params.sessionId) query.set("sessionId", params.sessionId);
+  if (params.productId) query.set("productId", params.productId);
+  if (params.limit) query.set("limit", String(params.limit));
+  const data = await apiCall(`/chat/history?${query}`, { method: "GET" });
   return data.result;
 }
 

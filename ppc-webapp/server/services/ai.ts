@@ -3,6 +3,8 @@
 // Uses OpenAI Chat Completions API (gpt-4.1-mini)
 // ════════════════════════════════════════════════════════════════
 
+import { getAugmentedContext, storeMessageWithEmbedding } from "./chatHistory.ts";
+
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = "gpt-4.1-mini";
 
@@ -28,6 +30,7 @@ export interface ChatResponse {
     panel?: string;
     payload?: any;
   };
+  sources?: { url: string; snippet: string }[];
 }
 
 export interface ProductContext {
@@ -174,26 +177,63 @@ async function callOpenAIJson<T>(messages: OpenAIMessage[], options: { temperatu
 export async function chatWithAssistant(
   message: string,
   history: ChatHistory[] = [],
-  context: ChatContext = {}
+  context: ChatContext = {},
+  options: { sessionId?: string; productId?: string } = {}
 ): Promise<ChatResponse> {
   try {
     const contextBlock = buildContextBlock(context);
-    const systemPrompt = CHAT_SYSTEM_PROMPT + contextBlock;
+
+    // RAG: Retrieve relevant context from knowledge base and past conversations
+    let ragBlock = "";
+    let sources: { url: string; snippet: string }[] = [];
+    if (options.sessionId) {
+      try {
+        const rag = await getAugmentedContext({
+          message,
+          sessionId: options.sessionId,
+          productId: options.productId,
+        });
+        ragBlock = rag.ragBlock;
+        sources = rag.sources;
+      } catch (err) {
+        console.error("[AI Service] RAG retrieval failed, continuing without:", err);
+      }
+    }
+
+    const systemPrompt = CHAT_SYSTEM_PROMPT + contextBlock + ragBlock;
 
     const messages: OpenAIMessage[] = [
       { role: "system", content: systemPrompt },
-      ...history.map((h) => ({ role: h.role, content: h.content })),
+      ...history.slice(-6).map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: message },
     ];
 
     const responseText = await callOpenAI(messages, { temperature: 0.7, maxTokens: 1500 });
 
-    // Attempt to detect if the response implies a suggested action
+    // Store messages for future RAG retrieval
+    if (options.sessionId) {
+      // Fire and forget — don't block the response
+      storeMessageWithEmbedding({
+        sessionId: options.sessionId,
+        productId: options.productId,
+        role: "user",
+        content: message,
+      }).catch((err) => console.error("[AI Service] Failed to store user message:", err));
+
+      storeMessageWithEmbedding({
+        sessionId: options.sessionId,
+        productId: options.productId,
+        role: "assistant",
+        content: responseText,
+      }).catch((err) => console.error("[AI Service] Failed to store assistant message:", err));
+    }
+
     const suggestedAction = detectSuggestedAction(message, responseText);
 
     return {
       message: responseText,
       ...(suggestedAction ? { suggestedAction } : {}),
+      ...(sources.length > 0 ? { sources } : {}),
     };
   } catch (err) {
     console.error("[AI Service] chatWithAssistant error:", err);
@@ -657,4 +697,123 @@ Keywords (${keywords.length}): ${keywords.slice(0, 50).join(", ")}${keywords.len
     console.error("[AI Service] suggestCampaignStructure error:", err);
     return fallback;
   }
+}
+
+// ── Onboarding: Product Extraction ──
+
+export interface ExtractedProductInfo {
+  name: string;
+  description: string;
+  valueProposition: string;
+  targetAudience: string;
+  acv: string;
+  integrations: string;
+  features: string[];
+  keywords: string[];
+}
+
+/**
+ * Extract product information from crawled website content using AI.
+ */
+export async function extractProductInfo(params: {
+  title: string;
+  metaDescription: string;
+  headings: string[];
+  bodyText: string;
+  url: string;
+}): Promise<ExtractedProductInfo> {
+  const { title, metaDescription, headings, bodyText, url } = params;
+
+  const fallback: ExtractedProductInfo = {
+    name: title || new URL(url).hostname.replace("www.", ""),
+    description: metaDescription || "",
+    valueProposition: "",
+    targetAudience: "",
+    acv: "",
+    integrations: "",
+    features: [],
+    keywords: [],
+  };
+
+  try {
+    const systemPrompt = `You are a product analyst. Given the content of a product/company website, extract structured product information.
+
+Return a JSON object with this exact structure:
+{
+  "name": "Product or company name",
+  "description": "One-sentence product description (max 150 chars)",
+  "valueProposition": "Core value proposition — what problem it solves and for whom",
+  "targetAudience": "Primary target buyer (job titles, company types)",
+  "acv": "Pricing/ACV range if mentioned, otherwise best estimate based on the product type",
+  "integrations": "Key integrations or platforms mentioned",
+  "features": ["Feature 1", "Feature 2", ...],
+  "keywords": ["keyword 1", "keyword 2", ...]
+}
+
+For keywords: extract 15-25 search keywords that potential buyers would use to find this product. Include:
+- Product category terms (e.g., "AP automation software")
+- Problem-based terms (e.g., "reduce invoice processing time")
+- Feature terms (e.g., "automated three-way matching")
+- Competitor alternative terms if competitors are mentioned
+Focus on B2B search intent keywords.`;
+
+    const userContent = `URL: ${url}
+Title: ${title}
+Meta Description: ${metaDescription}
+Headings: ${headings.slice(0, 20).join(" | ")}
+
+Page Content (excerpt):
+${bodyText.slice(0, 10000)}`;
+
+    const messages: OpenAIMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent },
+    ];
+
+    const result = await callOpenAIJson<ExtractedProductInfo>(messages, {
+      temperature: 0.4,
+      maxTokens: 2000,
+    });
+
+    if (!result) return fallback;
+
+    return {
+      name: result.name || fallback.name,
+      description: result.description || fallback.description,
+      valueProposition: result.valueProposition || "",
+      targetAudience: result.targetAudience || "",
+      acv: result.acv || "",
+      integrations: result.integrations || "",
+      features: result.features?.length > 0 ? result.features : [],
+      keywords: result.keywords?.length > 0 ? result.keywords : [],
+    };
+  } catch (err) {
+    console.error("[AI Service] extractProductInfo error:", err);
+    return fallback;
+  }
+}
+
+/**
+ * Generate ad copy variants for an onboarding product.
+ * Uses the extracted product info + keywords to generate headlines and descriptions.
+ */
+export async function generateOnboardingAdCopy(params: {
+  product: ExtractedProductInfo;
+  keywords: string[];
+  count?: number;
+}): Promise<{ headlines: string[]; descriptions: string[] }> {
+  const { product, keywords, count = 15 } = params;
+
+  // Delegate to existing generateAdCopy with the right shape
+  return generateAdCopy({
+    keywords,
+    product: {
+      name: product.name,
+      description: product.description,
+      acv: product.acv,
+      target: product.targetAudience,
+    },
+    tone: "professional",
+    count,
+  });
 }

@@ -1,6 +1,7 @@
 import React from "react";
-import { MessageSquare, Hash, Bookmark, Target, Briefcase, Users, Key, PanelRightOpen, PanelRightClose, Command } from "lucide-react";
+import { MessageSquare, Hash, Bookmark, Target, Briefcase, Users, Database, Key, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { COLORS, COUNTRY_MARKETS } from "../../constants";
+import { ProductSwitcher } from "./ProductSwitcher";
 
 interface IconRailProps {
   sidebarTab: string;
@@ -15,6 +16,9 @@ interface IconRailProps {
   market: any;
   panelOpen: boolean;
   setPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  products: { id: string; name: string; description: string }[];
+  activeProductId: string;
+  setActiveProductId: (id: string) => void;
 }
 
 export const IconRail: React.FC<IconRailProps> = ({
@@ -30,19 +34,22 @@ export const IconRail: React.FC<IconRailProps> = ({
   market,
   panelOpen,
   setPanelOpen,
+  products,
+  activeProductId,
+  setActiveProductId,
 }) => {
   return (
     <div style={{
       width: 56, minWidth: 56, background: "#f1f2f4", borderRight: `1px solid ${COLORS.border}`,
       display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, gap: 4,
     }}>
-      {/* Logo */}
-      <div style={{
-        width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.purple})`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20,
-        boxShadow: `0 2px 12px rgba(13,148,136,0.2)`,
-      }}>
-        <Command size={18} color="#fff" strokeWidth={2.5} />
+      {/* Product Switcher (replaces logo) */}
+      <div style={{ marginBottom: 20 }}>
+        <ProductSwitcher
+          products={products}
+          activeProductId={activeProductId}
+          setActiveProductId={setActiveProductId}
+        />
       </div>
 
       {[
@@ -52,6 +59,7 @@ export const IconRail: React.FC<IconRailProps> = ({
         { icon: Target, tab: "campaigns", label: "Campaigns" },
         { icon: Briefcase, tab: "products", label: "Products" },
         { icon: Users, tab: "audience", label: "Audience" },
+        { icon: Database, tab: "knowledge", label: "Knowledge Base" },
       ].map(({ icon: Icon, tab, label }) => (
         <button
           key={tab}
