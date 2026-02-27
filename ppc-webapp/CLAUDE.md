@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Orion — SEO/PPC Intelligence Platform
 
 ## Project Overview
@@ -30,16 +34,18 @@ ppc-webapp/
       panels/                  # 16 panel components (Table, Competitor, Visual, Campaign, CampaignBuilder, SEO, Backlinks, GSC, GA, Budget, BudgetAllocator, Revenue, Product, Audience, Timeline, Portfolio)
       sidebar/                 # 13 sidebar components (IconRail, ApiSettings, Chat, Seeds, Groups, Campaigns, Products, Audience, ProductSwitcher, ProductFormModal, ProductOnboardingWizard, KnowledgeTab)
     services/
+      ai.ts                    # Frontend client for /api/ai/* (chat, ICP, persona, ad copy)
       dataforseo.ts            # Frontend client for /api/keywords/* (proxied to Express)
-      stripe.ts                # Frontend client for /api/stripe/*
-      seo.ts                   # Frontend client for /api/seo/*
-      onboarding.ts            # Frontend client for /api/onboarding/* (crawl + AI extraction)
-      knowledge.ts             # Frontend client for /api/knowledge/* (crawl, search, clusters)
-      google-analytics.ts      # Frontend client for /api/ga4/* (GA4 live data)
-      search-console.ts        # Frontend client for /api/gsc/* (GSC live data)
+      export.ts                # CSV/PDF export utilities
       google-ads.ts            # Frontend client for /api/google-ads/* (campaign performance + push)
+      google-analytics.ts      # Frontend client for /api/ga4/* (GA4 live data)
       google-auth.ts           # Frontend client for /api/google/* (OAuth status + URL)
-      pipeline.ts              # Frontend client for /api/pipeline/* (submit, poll, list jobs)
+      knowledge.ts             # Frontend client for /api/knowledge/* (crawl, search, clusters)
+      onboarding.ts            # Frontend client for /api/onboarding/* (crawl + AI extraction)
+      pipeline.ts              # Frontend client for /api/pipeline/* (submit, poll, list jobs, schedules)
+      search-console.ts        # Frontend client for /api/gsc/* (GSC live data)
+      seo.ts                   # Frontend client for /api/seo/*
+      stripe.ts                # Frontend client for /api/stripe/*
     types/
       index.ts                 # Re-exports service types (including GA4, Google Ads, Google Auth)
   server/
@@ -59,6 +65,7 @@ ppc-webapp/
       google-analytics.ts      # GA4 Data API: overview, channels, pages, conversions, trends
       search-console.ts        # Google Search Console API: queries, pages, devices, countries, trends
       google-ads.ts            # Google Ads API: campaign performance, keywords, search terms, push campaigns
+      budget.ts                # Budget allocation logic
       jobQueue.ts              # pg-boss job queue initialization + worker registration
       pipeline.ts              # Keyword research agent pipeline: tools, agents, scoring, pg-boss worker
     routes/
@@ -72,7 +79,8 @@ ppc-webapp/
       google-analytics.ts      # /api/ga4/* — data, test, configured
       search-console.ts        # /api/gsc/* — data, sites, test, configured
       google-ads.ts            # /api/google-ads/* — campaigns, keywords, search-terms, quality-scores, push, status
-      pipeline.ts              # /api/pipeline/* — run, jobs/:id, jobs (keyword research pipeline)
+      pipeline.ts              # /api/pipeline/* — run, jobs/:id, jobs, schedules CRUD
+      budget.ts                # /api/budget/* — budget allocation
 ```
 
 ### Key Patterns
@@ -97,6 +105,7 @@ npm run dev          # Vite dev server (frontend only, port 5173)
 npm run server       # Express backend (port 3001) + pg-boss job queue
 npm run dev:all      # Both concurrently
 npm run build        # Vite production build
+npm run lint         # ESLint
 ```
 
 ### Environment Variables
