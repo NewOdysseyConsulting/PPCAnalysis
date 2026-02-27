@@ -90,12 +90,6 @@ export async function getCrawlStatus(jobId: number): Promise<CrawlJob> {
   return data.result;
 }
 
-export async function getCrawlJobs(siteId?: string): Promise<CrawlJob[]> {
-  const query = siteId ? `?siteId=${encodeURIComponent(siteId)}` : "";
-  const data = await apiCall(`/crawl/jobs${query}`, { method: "GET" });
-  return data.result;
-}
-
 export async function stopCrawl(jobId: number): Promise<{ stopped: boolean }> {
   const data = await apiCall(`/crawl/stop/${jobId}`);
   return data.result;

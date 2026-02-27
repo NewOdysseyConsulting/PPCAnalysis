@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, Table2, GitCompare, BarChart3, Target, DollarSign, TrendingUp, Search, ExternalLink, Activity, Zap, Bot, User, SlidersHorizontal, Calendar, Users, Briefcase } from "lucide-react";
+import { Send, Table2, GitCompare, BarChart3, Target, DollarSign, TrendingUp, Search, ExternalLink, Activity, Zap, Bot, User, SlidersHorizontal, Calendar, Users, Briefcase, ArrowRight } from "lucide-react";
 import { COLORS } from "../../constants";
 
 interface ChatTabProps {
@@ -108,8 +108,24 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                   </div>
                 );
               })}
-              <div style={{ fontSize: 10, color: msg.role === "user" ? "rgba(255,255,255,0.6)" : COLORS.textMuted, marginTop: 8 }}>
-                {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <span style={{ fontSize: 10, color: msg.role === "user" ? "rgba(255,255,255,0.6)" : COLORS.textMuted }}>
+                  {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                {msg.action && msg.role !== "user" && (
+                  <button
+                    onClick={msg.action}
+                    style={{
+                      fontSize: 10, fontWeight: 600, color: COLORS.accent,
+                      background: COLORS.accentDim, border: `1px solid ${COLORS.accent}`,
+                      borderRadius: 4, padding: "2px 8px", cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                      display: "inline-flex", alignItems: "center", gap: 3,
+                    }}
+                  >
+                    View <ArrowRight size={10} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

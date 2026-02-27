@@ -29,12 +29,12 @@ router.post("/chat", async (req: Request, res: Response, next: NextFunction) => 
 });
 
 // GET /api/ai/chat/history
-router.get("/chat/history", (req: Request, res: Response, next: NextFunction) => {
+router.get("/chat/history", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const sessionId = req.query.sessionId as string | undefined;
     const productId = req.query.productId as string | undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
-    const messages = getHistory({ sessionId, productId, limit });
+    const messages = await getHistory({ sessionId, productId, limit });
     res.json({ result: messages });
   } catch (err) {
     next(err);

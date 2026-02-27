@@ -18,8 +18,18 @@ export interface ChatMessage {
   productId: string | null;
   role: string;
   content: string;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
+}
+
+interface ChatMessageRow {
+  id: number;
+  session_id: string;
+  product_id: string | null;
+  role: string;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface RagContext {
@@ -34,7 +44,7 @@ export async function storeMessage(params: {
   productId?: string;
   role: string;
   content: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }): Promise<number> {
   const db = getDb();
   const [row] = await db("chat_messages")
@@ -58,7 +68,7 @@ export async function storeMessageWithEmbedding(params: {
   productId?: string;
   role: string;
   content: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }): Promise<number> {
   const messageId = await storeMessage(params);
 
@@ -97,7 +107,7 @@ export async function getHistory(params: {
 
   const rows = await query;
 
-  return rows.reverse().map((r: any) => ({
+  return (rows as ChatMessageRow[]).reverse().map((r) => ({
     id: r.id,
     sessionId: r.session_id,
     productId: r.product_id,

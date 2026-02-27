@@ -183,7 +183,7 @@ interface DfsTask {
   id: string;
   status_code: number;
   status_message: string;
-  result?: unknown[];
+  result?: Record<string, any>[];
 }
 
 async function apiPost(endpoint: string, body: unknown, credentials: Credentials): Promise<DfsResponse> {
@@ -233,14 +233,13 @@ async function apiGet(endpoint: string, credentials: Credentials): Promise<DfsRe
 
 // ── Normalization ──
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function normalizeKeywordResult(result: any): NormalizedKeyword | null {
+function normalizeKeywordResult(result: Record<string, any>): NormalizedKeyword | null {
   if (!result) return null;
 
   const trend = (result.monthly_searches || [])
     .slice(0, 12)
     .reverse()
-    .map((m: any) => m.search_volume || 0);
+    .map((m: Record<string, number>) => m.search_volume || 0);
 
   const competitionMap: Record<string, number> = { LOW: 0.15, MEDIUM: 0.45, HIGH: 0.80 };
   const competitionValue = result.competition_index != null
@@ -269,7 +268,7 @@ function normalizeKeywordResult(result: any): NormalizedKeyword | null {
   };
 }
 
-function normalizeTrafficResult(result: any): NormalizedTrafficResult | null {
+function normalizeTrafficResult(result: Record<string, any>): NormalizedTrafficResult | null {
   if (!result) return null;
   return {
     keyword: result.keyword,
@@ -601,7 +600,7 @@ export async function getLabsKeywordSuggestions(
     throw new Error(`Task failed: ${task?.status_message || "Unknown error"}`);
   }
 
-  return ((task.result as any)?.[0]?.items || []).map((item: any) => ({
+  return ((task.result as Record<string, any>[])?.[0]?.items || []).map((item: Record<string, any>) => ({
     keyword: item.keyword,
     volume: item.keyword_info.search_volume,
     cpc: item.keyword_info.cpc,
@@ -612,7 +611,7 @@ export async function getLabsKeywordSuggestions(
     difficulty: item.keyword_properties?.keyword_difficulty || 0,
     intent: item.search_intent_info?.main_intent || "commercial",
     intentForeign: item.search_intent_info?.foreign_intent || [],
-    trend: (item.keyword_info.monthly_searches || []).slice(0, 12).reverse().map((m: any) => m.search_volume || 0),
+    trend: (item.keyword_info.monthly_searches || []).slice(0, 12).reverse().map((m: Record<string, number>) => m.search_volume || 0),
     monthlySearches: item.keyword_info.monthly_searches || [],
     categories: item.keyword_info.categories || [],
   }));
@@ -643,7 +642,7 @@ export async function getLabsRelatedKeywords(
     throw new Error(`Task failed: ${task?.status_message || "Unknown error"}`);
   }
 
-  return ((task.result as any)?.[0]?.items || []).map((item: any) => ({
+  return ((task.result as Record<string, any>[])?.[0]?.items || []).map((item: Record<string, any>) => ({
     keyword: item.keyword_data.keyword,
     volume: item.keyword_data.keyword_info.search_volume,
     cpc: item.keyword_data.keyword_info.cpc,
@@ -654,7 +653,7 @@ export async function getLabsRelatedKeywords(
     difficulty: item.keyword_data.keyword_properties?.keyword_difficulty || 0,
     intent: item.keyword_data.search_intent_info?.main_intent || "commercial",
     intentForeign: item.keyword_data.search_intent_info?.foreign_intent || [],
-    trend: (item.keyword_data.keyword_info.monthly_searches || []).slice(0, 12).reverse().map((m: any) => m.search_volume || 0),
+    trend: (item.keyword_data.keyword_info.monthly_searches || []).slice(0, 12).reverse().map((m: Record<string, number>) => m.search_volume || 0),
     monthlySearches: item.keyword_data.keyword_info.monthly_searches || [],
     categories: item.keyword_data.keyword_info.categories || [],
   }));
@@ -685,7 +684,7 @@ export async function getLabsRankedKeywords(
     throw new Error(`Task failed: ${task?.status_message || "Unknown error"}`);
   }
 
-  return ((task.result as any)?.[0]?.items || []).map((item: any) => ({
+  return ((task.result as Record<string, any>[])?.[0]?.items || []).map((item: Record<string, any>) => ({
     keyword: item.keyword_data.keyword,
     volume: item.keyword_data.keyword_info.search_volume,
     cpc: item.keyword_data.keyword_info.cpc,
@@ -729,7 +728,7 @@ export async function getLabsDomainIntersection(
     throw new Error(`Task failed: ${task?.status_message || "Unknown error"}`);
   }
 
-  return ((task.result as any)?.[0]?.items || []).map((item: any) => ({
+  return ((task.result as Record<string, any>[])?.[0]?.items || []).map((item: Record<string, any>) => ({
     keyword: item.keyword_data.keyword,
     volume: item.keyword_data.keyword_info.search_volume,
     cpc: item.keyword_data.keyword_info.cpc,

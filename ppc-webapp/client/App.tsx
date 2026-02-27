@@ -1,16 +1,23 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Send, ChevronRight, ChevronDown, ArrowUpRight, BarChart3, Table2, GitCompare, Sparkles, Download, Save, FolderPlus, Settings, Plus, X, Loader2, TrendingUp, TrendingDown, Minus, Filter, SlidersHorizontal, Copy, FileDown, Zap, Target, Globe, DollarSign, Eye, MousePointerClick, Tag, Layers, MessageSquare, Bot, User, ChevronLeft, MoreHorizontal, Bookmark, Clock, Play, Pause, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Info, Star, ArrowRight, PanelRightOpen, PanelRightClose, Command, Hash, Briefcase, PenTool, LayoutGrid, List, Activity, Users, Key } from "lucide-react";
-import { getSearchVolume, getKeywordsForKeywords, getKeywordsForSite, getAdTrafficByKeywords, scoreRelevance, LOCATION_CODES, getApiStatus, getLabsKeywordSuggestions, getLabsRelatedKeywords, getLabsRankedKeywords, getLabsDomainIntersection, compareMarkets, getBingSearchVolume, getBingKeywordPerformance } from "./services/dataforseo";
+import { Download, FolderPlus, Loader2, Filter, FileDown, Globe } from "lucide-react";
+import { getSearchVolume, getKeywordsForKeywords, getKeywordsForSite, getAdTrafficByKeywords, scoreRelevance, LOCATION_CODES, getLabsKeywordSuggestions, getLabsRelatedKeywords, getLabsRankedKeywords, getLabsDomainIntersection, compareMarkets, getBingSearchVolume, getBingKeywordPerformance } from "./services/dataforseo";
 import { getStripeMetrics, getStripeAttribution, getStripeTimeline, getStripeStatus } from "./services/stripe";
 import type { StripeMetrics, StripeAttribution, StripeTimelinePoint } from "./services/stripe";
 import { getSerpFeatures, getSerpCompetitors, getHistoricalRanks, getBacklinkProfile, getBacklinkComparison, getGscData, getContentGaps } from "./services/seo";
 import type { SerpFeatureResult, SerpCompetitor, HistoricalRank, BacklinkProfile, GscData, ContentGap } from "./services/seo";
 import { downloadKeywordsCsv, downloadGoogleAdsEditor, downloadPdfReport } from "./services/export";
 import { sendChatMessage, generateIcp, generatePersona } from "./services/ai";
+import { getGA4Data } from "./services/google-analytics";
+import type { GA4Data } from "./services/google-analytics";
+import { getLiveGscData } from "./services/search-console";
+import { getGoogleConnectionStatus } from "./services/google-auth";
+import type { GoogleConnectionStatus } from "./services/google-auth";
+import { pushCampaignToGoogleAds } from "./services/google-ads";
+import type { PushCampaignResult } from "./services/google-ads";
 import type { Campaign, ChannelConfig, IcpProfile, BuyerPersona, AudienceSegment, CampaignTimeline } from "./types";
 import { COLORS } from "./constants";
 import { Sparkline, IntentBadge, MetricChip } from "./components/ui";
-import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_GSC_DATA, SAMPLE_GSC_PAGES, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES, SAMPLE_CHANNEL_CONFIGS, SAMPLE_ICP, SAMPLE_PERSONAS, SAMPLE_AUDIENCE_SEGMENTS, SAMPLE_TIMELINE, PRODUCT1_INFO, PRODUCT2_INFO, PRODUCT2_KEYWORDS, PRODUCT2_CAMPAIGNS, PRODUCT2_CHANNEL_CONFIGS, PRODUCT2_ICP, PRODUCT2_PERSONAS, PRODUCT2_AUDIENCE_SEGMENTS, PRODUCT2_TIMELINE, PRODUCT2_SEED_KEYWORDS, PRODUCT2_SAVED_GROUPS } from "./constants";
+import { SAMPLE_KEYWORDS, SAMPLE_COMPETITORS, SAMPLE_CAMPAIGNS, SAMPLE_GA_DATA, COUNTRY_MARKETS, INITIAL_MESSAGES, SAMPLE_CHANNEL_CONFIGS, SAMPLE_ICP, SAMPLE_PERSONAS, SAMPLE_AUDIENCE_SEGMENTS, SAMPLE_TIMELINE, PRODUCT1_INFO, PRODUCT2_INFO, PRODUCT2_KEYWORDS, PRODUCT2_CAMPAIGNS, PRODUCT2_CHANNEL_CONFIGS, PRODUCT2_ICP, PRODUCT2_PERSONAS, PRODUCT2_AUDIENCE_SEGMENTS, PRODUCT2_TIMELINE, PRODUCT2_SEED_KEYWORDS, PRODUCT2_SAVED_GROUPS } from "./constants";
 import { TablePanel, CompetitorPanel, VisualPanel, CampaignBuilderPanel, SeoPanel, BacklinksPanel, GscPanel, GaPanel, BudgetPanel, RevenuePanel, ProductPanel, BudgetAllocatorPanel, AudiencePanel, TimelinePanel, PortfolioPanel } from "./components/panels";
 import { ChatTab, SeedsTab, GroupsTab, CampaignsTab, ProductsTab, IconRail, ApiSettingsPanel, AudienceTab, ProductFormModal, ProductOnboardingWizard, KnowledgeTab } from "./components/sidebar";
 import usePortfolioState from "./hooks/usePortfolioState";
@@ -102,6 +109,9 @@ export default function OrionApp() {
   const setSeedKeywords = useCallback((v: any) => typeof v === 'function'
     ? updateActiveDataFn((c: any) => ({ seedKeywords: v(c.seedKeywords) }))
     : updateActiveData({ seedKeywords: v }), [updateActiveData, updateActiveDataFn]);
+  const setSavedGroups = useCallback((v: any) => typeof v === 'function'
+    ? updateActiveDataFn((c: any) => ({ savedGroups: v(c.savedGroups) }))
+    : updateActiveData({ savedGroups: v }), [updateActiveData, updateActiveDataFn]);
   const setLiveCompetitors = useCallback((v: any) => updateActiveData({ liveCompetitors: v }), [updateActiveData]);
   const setLiveGaps = useCallback((v: any) => updateActiveData({ liveGaps: v }), [updateActiveData]);
   const setBingData = useCallback((v: any) => updateActiveData({ bingData: v }), [updateActiveData]);
@@ -116,7 +126,8 @@ export default function OrionApp() {
   const [selectedKeywords, setSelectedKeywords] = useState(new Set());
   const [sortCol, setSortCol] = useState("relevance");
   const [sortDir, setSortDir] = useState("desc");
-  const [activeFilters, setActiveFilters] = useState([]);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [activeCampaign, setActiveCampaign] = useState(0);
   const [activeAdGroup, setActiveAdGroup] = useState(0);
@@ -154,6 +165,11 @@ export default function OrionApp() {
   const [gscData, setGscData] = useState<GscData | null>(null);
   const [contentGaps, setContentGaps] = useState<ContentGap[]>([]);
   const [seoLoading, setSeoLoading] = useState<string | null>(null);
+  const [liveGA, setLiveGA] = useState<GA4Data | null>(null);
+  const [gaLoading, setGaLoading] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState<GoogleConnectionStatus | null>(null);
+  const [googleAdsPushing, setGoogleAdsPushing] = useState(false);
+  const [googleAdsPushResult, setGoogleAdsPushResult] = useState<PushCampaignResult | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -260,6 +276,13 @@ export default function OrionApp() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Check Google API connection status on mount
+  useEffect(() => {
+    getGoogleConnectionStatus()
+      .then(setGoogleStatus)
+      .catch(() => setGoogleStatus(null));
+  }, []);
+
   const toggleKeyword = (idx: number) => {
     setSelectedKeywords(prev => {
       const next = new Set(prev);
@@ -268,7 +291,32 @@ export default function OrionApp() {
     });
   };
 
-  const sortedKeywords = [...mergedKeywords].sort((a: any, b: any) => {
+  const filteredKeywords = React.useMemo(() => {
+    if (activeFilters.length === 0) return mergedKeywords;
+    return mergedKeywords.filter((kw: any) => {
+      return activeFilters.every((f) => {
+        if (f === "intent:commercial") return kw.intent === "commercial";
+        if (f === "intent:transactional") return kw.intent === "transactional";
+        if (f === "intent:informational") return kw.intent === "informational";
+        if (f === "intent:navigational") return kw.intent === "navigational";
+        if (f === "volume:high") return kw.volume >= 1000;
+        if (f === "volume:medium") return kw.volume >= 100 && kw.volume < 1000;
+        if (f === "volume:low") return kw.volume < 100;
+        if (f === "competition:low") return kw.competition < 0.3;
+        if (f === "competition:medium") return kw.competition >= 0.3 && kw.competition < 0.7;
+        if (f === "competition:high") return kw.competition >= 0.7;
+        if (f === "difficulty:easy") return kw.difficulty < 30;
+        if (f === "difficulty:medium") return kw.difficulty >= 30 && kw.difficulty < 60;
+        if (f === "difficulty:hard") return kw.difficulty >= 60;
+        if (f === "source:bing") return kw.sources?.includes("bing");
+        if (f === "source:google") return kw.sources?.includes("google");
+        if (f === "cpc:arbitrage") return kw.cpcDelta >= 30;
+        return true;
+      });
+    });
+  }, [mergedKeywords, activeFilters]);
+
+  const sortedKeywords = [...filteredKeywords].sort((a: any, b: any) => {
     const dir = sortDir === "desc" ? -1 : 1;
     const aVal = a[sortCol];
     const bVal = b[sortCol];
@@ -283,6 +331,28 @@ export default function OrionApp() {
     if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc");
     else { setSortCol(col); setSortDir("desc"); }
   };
+
+  const handleSaveGroup = useCallback(() => {
+    if (selectedKeywords.size === 0) return;
+    const selected = sortedKeywords.filter((_: any, i: number) => selectedKeywords.has(i));
+    const groupName = `Group ${savedGroups.length + 1} (${selected.length} kws)`;
+    const newGroup = {
+      id: Date.now(),
+      name: groupName,
+      description: `Saved ${selected.length} keywords`,
+      createdAt: new Date(),
+      color: [COLORS.accent, COLORS.purple, COLORS.amber, COLORS.green, COLORS.red][savedGroups.length % 5],
+      keywords: selected,
+    };
+    setSavedGroups((prev: any[]) => [...prev, newGroup]);
+    setSelectedKeywords(new Set());
+  }, [selectedKeywords, sortedKeywords, savedGroups, setSavedGroups]);
+
+  const toggleFilter = useCallback((filter: string) => {
+    setActiveFilters(prev =>
+      prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
+    );
+  }, []);
 
   // ── Live DataForSEO Research ──
   const handleLiveResearch = useCallback(async (seedKws: string[]) => {
@@ -801,11 +871,27 @@ export default function OrionApp() {
   const handleFetchGsc = useCallback(async () => {
     setSeoLoading("gsc");
     try {
-      const result = await getGscData();
-      setGscData(result);
+      // Try live GSC API first if configured
+      if (googleStatus?.gsc) {
+        const result = await getLiveGscData();
+        setGscData(result);
+      } else {
+        // Fall back to mock SEO service
+        const result = await getGscData();
+        setGscData(result);
+      }
     } catch (err) { console.error("GSC error:", err); }
     setSeoLoading(null);
-  }, []);
+  }, [googleStatus]);
+
+  const handleFetchGA = useCallback(async () => {
+    setGaLoading(true);
+    try {
+      const result = await getGA4Data({ currency: market.currency });
+      setLiveGA(result);
+    } catch (err) { console.error("GA4 error:", err); }
+    setGaLoading(false);
+  }, [market.currency]);
 
   const handleFetchContentGaps = useCallback(async () => {
     const kws = seedKeywords.length > 0 ? seedKeywords.map((s: any) => s.keyword) : adjustedKeywords.slice(0, 10).map((k: any) => k.keyword);
@@ -827,6 +913,45 @@ export default function OrionApp() {
   const handleExportGoogleAds = useCallback(() => {
     downloadGoogleAdsEditor(campaigns as any, market, `google-ads-${market.code.toLowerCase()}.csv`);
   }, [campaigns, market]);
+
+  const handlePushToGoogleAds = useCallback(async (campaignIdx: number) => {
+    const camp = campaigns[campaignIdx];
+    if (!camp) return;
+    setGoogleAdsPushing(true);
+    setGoogleAdsPushResult(null);
+    try {
+      const result = await pushCampaignToGoogleAds({
+        name: camp.name,
+        dailyBudget: camp.bidConfig.dailyBudget,
+        bidStrategy: camp.bidConfig.strategy,
+        targetCpa: camp.bidConfig.targetCpa,
+        targetRoas: camp.bidConfig.targetRoas,
+        targetCountries: camp.targetCountries,
+        adGroups: camp.adGroups.map((ag: any) => ({
+          name: ag.name,
+          keywords: ag.keywords.map((kw: any) => ({
+            keyword: kw.keyword,
+            matchType: kw.matchType,
+            maxCpc: kw.maxCpc,
+          })),
+          negativeKeywords: ag.negativeKeywords.map((nk: any) => ({
+            keyword: nk.keyword,
+            matchType: nk.matchType,
+          })),
+          headlines: ag.headlines,
+          descriptions: ag.descriptions,
+          finalUrl: ag.finalUrl || camp.landingPageUrl,
+        })),
+        negativeKeywords: camp.negativeKeywords
+          .filter((nk: any) => nk.level === "campaign")
+          .map((nk: any) => ({ keyword: nk.keyword, matchType: nk.matchType })),
+      });
+      setGoogleAdsPushResult(result);
+    } catch (err) {
+      console.error("Google Ads push error:", err);
+    }
+    setGoogleAdsPushing(false);
+  }, [campaigns]);
 
   const handleExportPdf = useCallback(() => {
     const sections = [
@@ -898,7 +1023,7 @@ export default function OrionApp() {
       );
       const newIcp: IcpProfile = {
         id: crypto.randomUUID(),
-        ...result,
+        ...(result as Omit<IcpProfile, "id">),
       };
       setIcpProfiles((prev: any) => [...prev, newIcp]);
     } catch (err) {
@@ -915,11 +1040,12 @@ export default function OrionApp() {
         icpProfiles[0]?.name,
         buyerPersonas.map(p => p.name)
       );
+      const persona = result as Record<string, unknown>;
       const newPersona: BuyerPersona = {
         id: crypto.randomUUID(),
         icpId: icpProfiles[0]?.id || "",
-        ...result,
-        seniority: (['c-suite', 'director', 'manager', 'individual-contributor'].includes(result.seniority) ? result.seniority : 'manager') as BuyerPersona['seniority'],
+        ...(persona as Omit<BuyerPersona, "id" | "icpId" | "seniority">),
+        seniority: (['c-suite', 'director', 'manager', 'individual-contributor'].includes(persona.seniority as string) ? persona.seniority : 'manager') as BuyerPersona['seniority'],
       };
       setBuyerPersonas((prev: any) => [...prev, newPersona]);
     } catch (err) {
@@ -1236,13 +1362,18 @@ export default function OrionApp() {
 
             {panelMode === "table" && (
               <div style={{ display: "flex", gap: 4 }}>
-                <button style={{
-                  height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
-                  background: "transparent", color: COLORS.textSecondary, cursor: "pointer",
+                <button
+                  onClick={() => setShowFilterPanel(p => !p)}
+                  style={{
+                  height: 28, padding: "0 10px", borderRadius: 6,
+                  border: `1px solid ${showFilterPanel || activeFilters.length > 0 ? COLORS.accent : COLORS.border}`,
+                  background: showFilterPanel || activeFilters.length > 0 ? COLORS.accentDim : "transparent",
+                  color: showFilterPanel || activeFilters.length > 0 ? COLORS.accent : COLORS.textSecondary,
+                  cursor: "pointer",
                   fontSize: 11, fontFamily: "'DM Sans', sans-serif",
                   display: "flex", alignItems: "center", gap: 4,
                 }}>
-                  <Filter size={11} /> Filters
+                  <Filter size={11} /> Filters{activeFilters.length > 0 ? ` (${activeFilters.length})` : ""}
                 </button>
                 <button
                   onClick={handleExportKeywords}
@@ -1264,13 +1395,19 @@ export default function OrionApp() {
                 }}>
                   <FileDown size={11} /> PDF Report
                 </button>
-                <button style={{
+                <button
+                  onClick={handleSaveGroup}
+                  disabled={selectedKeywords.size === 0}
+                  style={{
                   height: 28, padding: "0 10px", borderRadius: 6, border: `1px solid ${COLORS.accent}`,
-                  background: COLORS.accentDim, color: COLORS.accent, cursor: "pointer",
+                  background: selectedKeywords.size > 0 ? COLORS.accentDim : "transparent",
+                  color: selectedKeywords.size > 0 ? COLORS.accent : COLORS.textMuted,
+                  cursor: selectedKeywords.size > 0 ? "pointer" : "default",
                   fontSize: 11, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
                   display: "flex", alignItems: "center", gap: 4,
+                  opacity: selectedKeywords.size > 0 ? 1 : 0.5,
                 }}>
-                  <FolderPlus size={11} /> Save Group
+                  <FolderPlus size={11} /> Save Group{selectedKeywords.size > 0 ? ` (${selectedKeywords.size})` : ""}
                 </button>
                 {hasApiCredentials && (
                   <button
@@ -1310,10 +1447,42 @@ export default function OrionApp() {
             )}
           </div>
 
+          {/* ── FILTER PANEL ── */}
+          {panelMode === "table" && showFilterPanel && (
+            <div style={{ padding: "8px 16px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgCard, display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {[
+                { group: "Intent", filters: [{ key: "intent:commercial", label: "Commercial" }, { key: "intent:transactional", label: "Transactional" }, { key: "intent:informational", label: "Informational" }, { key: "intent:navigational", label: "Navigational" }] },
+                { group: "Volume", filters: [{ key: "volume:high", label: "High (1k+)" }, { key: "volume:medium", label: "Medium (100-1k)" }, { key: "volume:low", label: "Low (<100)" }] },
+                { group: "Competition", filters: [{ key: "competition:low", label: "Low" }, { key: "competition:medium", label: "Medium" }, { key: "competition:high", label: "High" }] },
+                { group: "Difficulty", filters: [{ key: "difficulty:easy", label: "Easy (<30)" }, { key: "difficulty:medium", label: "Medium (30-60)" }, { key: "difficulty:hard", label: "Hard (60+)" }] },
+                ...(hasBing ? [{ group: "Source", filters: [{ key: "source:google", label: "Google" }, { key: "source:bing", label: "Bing" }, { key: "cpc:arbitrage", label: "CPC Arbitrage" }] }] : []),
+              ].map(({ group, filters }) => (
+                <div key={group} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: 600, marginRight: 2 }}>{group}:</span>
+                  {filters.map(f => (
+                    <button key={f.key} onClick={() => toggleFilter(f.key)} style={{
+                      fontSize: 10, padding: "2px 8px", borderRadius: 4, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                      border: `1px solid ${activeFilters.includes(f.key) ? COLORS.accent : COLORS.border}`,
+                      background: activeFilters.includes(f.key) ? COLORS.accentDim : "transparent",
+                      color: activeFilters.includes(f.key) ? COLORS.accent : COLORS.textSecondary,
+                    }}>{f.label}</button>
+                  ))}
+                  <span style={{ width: 1, height: 16, background: COLORS.border, margin: "0 4px" }} />
+                </div>
+              ))}
+              {activeFilters.length > 0 && (
+                <button onClick={() => setActiveFilters([])} style={{
+                  fontSize: 10, padding: "2px 8px", borderRadius: 4, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                  border: `1px solid ${COLORS.red}`, background: "transparent", color: COLORS.red,
+                }}>Clear All</button>
+              )}
+            </div>
+          )}
+
           {/* ── TABLE MODE ── */}
           {panelMode === "table" && (
             <TablePanel
-              mergedKeywords={mergedKeywords}
+              mergedKeywords={filteredKeywords}
               sortedKeywords={sortedKeywords}
               selectedKeywords={selectedKeywords}
               toggleKeyword={toggleKeyword}
@@ -1356,6 +1525,10 @@ export default function OrionApp() {
               activeAdGroupIdx={activeAdGroup}
               setActiveAdGroupIdx={setActiveAdGroup}
               market={market}
+              googleAdsConnected={!!googleStatus?.googleAds}
+              onPushToGoogleAds={handlePushToGoogleAds}
+              googleAdsPushing={googleAdsPushing}
+              googleAdsPushResult={googleAdsPushResult}
             />
           )}
 
@@ -1393,12 +1566,19 @@ export default function OrionApp() {
               seoLoading={seoLoading}
               adjustedGSC={adjustedGSC}
               handleFetchGsc={handleFetchGsc}
+              gscConnected={!!googleStatus?.gsc}
             />
           )}
 
           {/* ── GA MODE ── */}
           {panelMode === "ga" && (
-            <GaPanel adjustedGA={adjustedGA} />
+            <GaPanel
+              adjustedGA={adjustedGA}
+              liveGA={liveGA}
+              gaLoading={gaLoading}
+              gaConnected={!!googleStatus?.ga4}
+              handleFetchGA={handleFetchGA}
+            />
           )}
 
           {/* ── BUDGET PLANNER MODE ── */}
@@ -1436,7 +1616,11 @@ export default function OrionApp() {
 
           {/* ── PRODUCT PROFILES MODE ── */}
           {panelMode === "product" && (
-            <ProductPanel products={products} />
+            <ProductPanel
+              products={products}
+              onEditProduct={(prod) => { setEditProductData(prod); setShowProductForm(true); }}
+              onAddProduct={() => { setEditProductData(null); setShowProductForm(true); }}
+            />
           )}
 
           {/* ── BUDGET ALLOCATOR MODE ── */}

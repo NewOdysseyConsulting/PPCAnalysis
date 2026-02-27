@@ -116,11 +116,11 @@ export async function getStoredClusters(productId: string): Promise<ClusterResul
     .where("product_id", productId)
     .orderBy("created_at");
 
-  return rows.map((r: any) => ({
+  return (rows as Array<{ name: string; keywords: string[]; centroid: number[] | null; metadata: ClusterResult["metadata"] | null }>).map((r) => ({
     name: r.name,
     keywords: r.keywords || [],
     centroid: r.centroid ? Array.from(r.centroid) : [],
-    metadata: r.metadata || {},
+    metadata: r.metadata || { avgVolume: 0, avgCpc: 0, dominantIntent: "", keywordCount: 0 },
   }));
 }
 
@@ -246,7 +246,7 @@ async function labelClusters(
       });
 
       if (response.ok) {
-        const data = (await response.json()) as any;
+        const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
         const content = data.choices?.[0]?.message?.content;
         if (content) {
           const parsed = JSON.parse(content) as { labels: string[] };

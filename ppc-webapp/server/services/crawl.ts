@@ -112,10 +112,11 @@ export async function crawlWebsite(url: string): Promise<CrawlResult> {
       linkUrls: [...new Set(linkUrls)].slice(0, 200),
       success: true,
     };
-  } catch (err: any) {
-    const message = err?.name === "TimeoutError"
+  } catch (err: unknown) {
+    const e = err instanceof Error ? err : null;
+    const message = e?.name === "TimeoutError"
       ? "Request timed out after 15 seconds"
-      : err?.message || "Unknown crawl error";
+      : e?.message || "Unknown crawl error";
     return { ...empty, error: message };
   }
 }

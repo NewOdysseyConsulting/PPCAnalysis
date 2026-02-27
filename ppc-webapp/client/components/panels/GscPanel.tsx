@@ -9,9 +9,10 @@ export interface GscPanelProps {
   seoLoading: string | null;
   adjustedGSC: any;
   handleFetchGsc: () => void;
+  gscConnected?: boolean;
 }
 
-export default function GscPanel({ gscData, seoLoading, adjustedGSC, handleFetchGsc }: GscPanelProps) {
+export default function GscPanel({ gscData, seoLoading, adjustedGSC, handleFetchGsc, gscConnected }: GscPanelProps) {
   const cardStyle: React.CSSProperties = { background: COLORS.bgCard, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16 };
   const labelStyle: React.CSSProperties = { fontSize: 10, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'JetBrains Mono', monospace" };
   const bigNumStyle: React.CSSProperties = { fontSize: 26, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" };

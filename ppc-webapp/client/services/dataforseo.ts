@@ -60,11 +60,6 @@ export interface ApiStatusResponse {
   supportedMarkets: string[];
 }
 
-export interface TaskResult {
-  status: "complete" | "pending";
-  results: NormalizedKeyword[];
-}
-
 // ── Location codes ──
 
 export const LOCATION_CODES: Record<string, LocationInfo> = {
@@ -190,54 +185,6 @@ export async function getBingKeywordPerformance(
 ): Promise<unknown[]> {
   const data = await apiCall("/bing/performance", {
     body: { keywords, countryCode },
-    headers: credHeaders(credentials),
-  });
-  return data.results;
-}
-
-// ── Async mode ──
-
-export async function submitSearchVolumeTask(
-  keywords: string[],
-  countryCode: string,
-  credentials?: Credentials,
-  options: Record<string, unknown> = {},
-): Promise<string> {
-  const data = await apiCall("/task/submit", {
-    body: { keywords, countryCode, options },
-    headers: credHeaders(credentials),
-  });
-  return data.taskId;
-}
-
-export async function getTaskResult(
-  taskId: string,
-  credentials?: Credentials,
-): Promise<TaskResult> {
-  const data = await apiCall(`/task/${taskId}`, {
-    method: "GET",
-    headers: credHeaders(credentials),
-  });
-  return data;
-}
-
-// ── Reference ──
-
-export async function getLocations(
-  credentials?: Credentials,
-  country: string | null = null,
-): Promise<unknown[]> {
-  const query = country ? `?country=${country}` : "";
-  const data = await apiCall(`/locations${query}`, {
-    method: "GET",
-    headers: credHeaders(credentials),
-  });
-  return data.results;
-}
-
-export async function getLanguages(credentials?: Credentials): Promise<unknown[]> {
-  const data = await apiCall("/languages", {
-    method: "GET",
     headers: credHeaders(credentials),
   });
   return data.results;

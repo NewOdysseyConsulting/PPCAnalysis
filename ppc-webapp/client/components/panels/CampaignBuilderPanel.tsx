@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { COLORS } from "../../constants";
-import { Target, ChevronRight, ChevronDown, Layers, Plus, X, Trash2, Copy } from "lucide-react";
-import type { Campaign, AdGroup, CampaignKeyword, NegativeKeyword, BidStrategy, MatchType, CampaignStatus } from "../../types";
+import { Target, ChevronRight, ChevronDown, Layers, Plus, X, Trash2, Copy, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import type { Campaign, AdGroup, CampaignKeyword, NegativeKeyword, BidStrategy, MatchType, CampaignStatus, PushCampaignResult } from "../../types";
 
 // ── Props ──
 
@@ -13,6 +13,10 @@ interface CampaignBuilderPanelProps {
   activeAdGroupIdx: number;
   setActiveAdGroupIdx: (idx: number) => void;
   market: { currency: string; code: string; name: string };
+  googleAdsConnected?: boolean;
+  onPushToGoogleAds?: (campaignIdx: number) => void;
+  googleAdsPushing?: boolean;
+  googleAdsPushResult?: PushCampaignResult | null;
 }
 
 // ── Shared Styles ──
@@ -180,6 +184,10 @@ export default function CampaignBuilderPanel({
   activeAdGroupIdx,
   setActiveAdGroupIdx,
   market,
+  googleAdsConnected,
+  onPushToGoogleAds,
+  googleAdsPushing,
+  googleAdsPushResult,
 }: CampaignBuilderPanelProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
@@ -847,6 +855,61 @@ export default function CampaignBuilderPanel({
           </div>
         )}
       </div>
+
+      {/* ─── Push to Google Ads ─── */}
+      {googleAdsConnected && onPushToGoogleAds && (
+        <div style={{
+          ...cardStyle,
+          border: `1px solid ${COLORS.accent}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}>
+          <Upload size={16} color={COLORS.accent} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>Push to Google Ads</div>
+            <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>
+              Create this campaign in your Google Ads account (as paused).
+            </div>
+          </div>
+          <button
+            onClick={() => onPushToGoogleAds(activeCampaignIdx)}
+            disabled={googleAdsPushing || camp.adGroups.reduce((a, g) => a + g.keywords.length, 0) === 0}
+            style={{
+              ...accentBtnStyle,
+              padding: "8px 16px",
+              opacity: googleAdsPushing ? 0.6 : 1,
+              cursor: googleAdsPushing ? "not-allowed" : "pointer",
+            }}
+          >
+            {googleAdsPushing ? (
+              <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Pushing...</>
+            ) : (
+              <><Upload size={13} /> Push Campaign</>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* ─── Push Result ─── */}
+      {googleAdsPushResult && (
+        <div style={{
+          ...cardStyle,
+          border: `1px solid ${COLORS.green}`,
+          background: COLORS.greenDim,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}>
+          <CheckCircle2 size={16} color={COLORS.green} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: COLORS.green }}>Campaign Created</div>
+            <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+              ID: {googleAdsPushResult.campaignId} &middot; {googleAdsPushResult.adGroupIds.length} ad groups &middot; {googleAdsPushResult.keywordCount} keywords &middot; {googleAdsPushResult.adCount} ads
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

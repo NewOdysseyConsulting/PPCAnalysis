@@ -56,10 +56,11 @@ router.post("/webhook", async (req: Request, res: Response, next: NextFunction) 
       return res.status(400).json({ error: "Missing stripe-signature header" });
     }
 
-    const event = stripeService.constructWebhookEvent(
-      (req as any).rawBody || Buffer.from(JSON.stringify(req.body)),
-      signature,
-    );
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    if (!rawBody) {
+      return res.status(400).json({ error: "Missing raw body — ensure express.raw() middleware is configured for this route" });
+    }
+    const event = stripeService.constructWebhookEvent(rawBody, signature);
 
     const result = await stripeService.handleWebhookEvent(event);
     res.json({ received: true, ...result });

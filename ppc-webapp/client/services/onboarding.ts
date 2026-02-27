@@ -50,22 +50,6 @@ async function apiCall(endpoint: string, body: unknown): Promise<any> {
 
 // ── Endpoints ──
 
-export async function crawlWebsite(url: string): Promise<CrawlResult> {
-  const data = await apiCall("/crawl", { url });
-  return data.result;
-}
-
-export async function extractProductInfo(crawlResult: CrawlResult): Promise<ExtractedProductInfo> {
-  const data = await apiCall("/extract-product", {
-    title: crawlResult.title,
-    metaDescription: crawlResult.metaDescription,
-    headings: crawlResult.headings,
-    bodyText: crawlResult.bodyText,
-    url: crawlResult.url,
-  });
-  return data.result;
-}
-
 export async function generateAdCopy(
   product: ExtractedProductInfo,
   keywords: string[],

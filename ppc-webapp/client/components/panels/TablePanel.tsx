@@ -12,7 +12,7 @@ export interface TablePanelProps {
   sortDir: string;
   handleSort: (col: string) => void;
   activeFilters: string[];
-  setActiveFilters: React.Dispatch<React.SetStateAction<never[]>>;
+  setActiveFilters: React.Dispatch<React.SetStateAction<string[]>>;
   hasBing: boolean;
   avgCpc: string;
   avgVolume: number;

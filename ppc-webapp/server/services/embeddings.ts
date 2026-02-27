@@ -16,7 +16,7 @@ export interface ChunkSearchResult {
   chunkId: number;
   content: string;
   score: number;
-  metadata: any;
+  metadata: Record<string, unknown>;
   url?: string;
   siteId?: string;
 }
@@ -34,7 +34,32 @@ export interface KeywordSearchResult {
   keywordId: number;
   keyword: string;
   score: number;
-  metadata: any;
+  metadata: Record<string, unknown>;
+}
+
+interface ChunkRow {
+  chunk_id: number;
+  content: string;
+  score: string;
+  metadata: Record<string, unknown> | null;
+  url: string;
+  site_id: string;
+}
+
+interface ChatMessageRow {
+  message_id: number;
+  content: string;
+  role: string;
+  score: string;
+  session_id: string;
+  product_id: string | undefined;
+}
+
+interface KeywordRow {
+  keyword_id: number;
+  keyword: string;
+  score: string;
+  metadata: Record<string, unknown> | null;
 }
 
 // ── Core: Generate embeddings via OpenAI ──
@@ -144,8 +169,8 @@ export async function querySimilarChunks(
 
   const rows = await query;
 
-  return rows
-    .map((row: any) => ({
+  return (rows as ChunkRow[])
+    .map((row) => ({
       chunkId: row.chunk_id,
       content: row.content,
       score: parseFloat(row.score),
@@ -153,7 +178,7 @@ export async function querySimilarChunks(
       url: row.url,
       siteId: row.site_id,
     }))
-    .filter((r: any) => r.score >= minScore)
+    .filter((r) => r.score >= minScore)
     .slice(0, limit);
 }
 
@@ -209,7 +234,7 @@ export async function querySimilarMessages(
 
   const rows = await query;
 
-  return rows.map((r: any) => ({
+  return (rows as ChatMessageRow[]).map((r) => ({
     messageId: r.message_id,
     content: r.content,
     role: r.role,
@@ -260,7 +285,7 @@ export async function querySimilarKeywords(
 
   const rows = await query;
 
-  return rows.map((r: any) => ({
+  return (rows as KeywordRow[]).map((r) => ({
     keywordId: r.keyword_id,
     keyword: r.keyword,
     score: parseFloat(r.score),

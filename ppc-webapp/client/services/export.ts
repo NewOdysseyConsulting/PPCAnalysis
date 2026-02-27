@@ -90,7 +90,7 @@ function triggerDownload(filename: string, content: string, mimeType: string): v
 /**
  * Generates a CSV string from headers and rows with proper escaping.
  */
-export function generateCsv(headers: string[], rows: (string | number)[][]): string {
+function generateCsv(headers: string[], rows: (string | number)[][]): string {
   const headerLine = headers.map(escapeCsvCell).join(",");
   const dataLines = rows.map(row => row.map(escapeCsvCell).join(","));
   return [headerLine, ...dataLines].join("\r\n");
@@ -99,7 +99,7 @@ export function generateCsv(headers: string[], rows: (string | number)[][]): str
 /**
  * Creates a CSV Blob and triggers a browser download.
  */
-export function downloadCsv(
+function downloadCsv(
   filename: string,
   headers: string[],
   rows: (string | number)[][],
@@ -131,7 +131,7 @@ const GOOGLE_ADS_EDITOR_HEADERS = [
  * Each campaign's ad groups produce one row per keyword (for keyword entries)
  * plus one row per ad group for the ad copy (headlines + descriptions).
  */
-export function generateGoogleAdsEditorCsv(
+function generateGoogleAdsEditorCsv(
   campaigns: Campaign[],
   market: Market,
 ): string {

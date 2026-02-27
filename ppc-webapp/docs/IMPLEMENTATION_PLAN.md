@@ -29,7 +29,7 @@ All 7 phases are complete.
 **Complexity:** Medium | **Dependencies:** None
 
 ### Delivered
-- `src/services/export.ts` — Client-side CSV, Google Ads Editor, and PDF export
+- `client/services/export.ts` — Client-side CSV, Google Ads Editor, and PDF export
 - `downloadKeywordsCsv()` — 11-column keyword table export
 - `downloadGoogleAdsEditor()` — Campaign export with match types, CPCs, ad copy
 - `downloadPdfReport()` — Print-friendly HTML report
@@ -42,10 +42,10 @@ All 7 phases are complete.
 **Complexity:** High | **Dependencies:** None
 
 ### Delivered
-- `src/components/panels/CampaignBuilderPanel.tsx` — Full CRUD campaign panel (1,032 lines)
-- `src/types/index.ts` — Campaign, AdGroup, BidConfig, CampaignKeyword, NegativeKeyword types
-- `src/constants/sampleData.ts` — Typed SAMPLE_CAMPAIGNS with match types, bid config, negatives
-- `src/components/sidebar/CampaignsTab.tsx` — New Campaign and Export buttons functional
+- `client/components/panels/CampaignBuilderPanel.tsx` — Full CRUD campaign panel (1,032 lines)
+- `client/types/index.ts` — Campaign, AdGroup, BidConfig, CampaignKeyword, NegativeKeyword types
+- `client/constants/sampleData.ts` — Typed SAMPLE_CAMPAIGNS with match types, bid config, negatives
+- `client/components/sidebar/CampaignsTab.tsx` — New Campaign and Export buttons functional
 - Inline editable names, status, bid strategy, per-keyword match type pills, negative keywords, character counters, ad preview
 
 ---
@@ -55,16 +55,16 @@ All 7 phases are complete.
 **Complexity:** Medium-High | **Dependencies:** Phase 2 (Campaign types)
 
 ### Delivered
-- `src/components/panels/BudgetAllocatorPanel.tsx` — Google/Bing budget allocation UI with projections
+- `client/components/panels/BudgetAllocatorPanel.tsx` — Google/Bing budget allocation UI with projections
 - `server/routes/budget.ts` — POST /api/budget/optimize endpoint
 - `server/services/budget.ts` — Channel mix optimization logic
-- `src/services/budget.ts` — Frontend budget optimization client
+- `client/services/budget.ts` — Frontend budget optimization client
 - Channel allocation grid, per-channel config cards, projections table, optimizer visualization
 
 ### Goal
 Split budget across Google Ads and Bing Ads (the two search channels). Per-channel ROI projections. Channel mix optimization between search engines.
 
-### Types (add to `src/types/index.ts`)
+### Types (add to `client/types/index.ts`)
 
 ```typescript
 type SearchChannel = 'google-ads' | 'bing-ads';
@@ -106,10 +106,10 @@ interface BudgetAllocation {
 
 | File | Purpose |
 |------|---------|
-| `src/components/panels/BudgetAllocatorPanel.tsx` | Google/Bing budget allocation UI |
+| `client/components/panels/BudgetAllocatorPanel.tsx` | Google/Bing budget allocation UI |
 | `server/routes/budget.ts` | `POST /api/budget/optimize` |
 | `server/services/budget.ts` | Mock channel mix optimization |
-| `src/services/budget.ts` | Frontend budget optimization client |
+| `client/services/budget.ts` | Frontend budget optimization client |
 
 ### BudgetAllocatorPanel Sections
 
@@ -123,10 +123,10 @@ interface BudgetAllocation {
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add `channelConfigs` state, `panelMode: "allocator"`, render BudgetAllocatorPanel |
-| `src/constants/sampleData.ts` | Add `SAMPLE_CHANNEL_CONFIGS` (Google Ads + Bing Ads defaults) |
-| `src/components/sidebar/ChatTab.tsx` | Add "allocator" panel mode button |
-| `src/components/panels/index.ts` | Export BudgetAllocatorPanel |
+| `client/App.tsx` | Add `channelConfigs` state, `panelMode: "allocator"`, render BudgetAllocatorPanel |
+| `client/constants/sampleData.ts` | Add `SAMPLE_CHANNEL_CONFIGS` (Google Ads + Bing Ads defaults) |
+| `client/components/sidebar/ChatTab.tsx` | Add "allocator" panel mode button |
+| `client/components/panels/index.ts` | Export BudgetAllocatorPanel |
 | `server/index.ts` | Register budget router |
 
 ---
@@ -138,7 +138,7 @@ interface BudgetAllocation {
 ### Delivered
 - `server/services/ai.ts` — Backend service using OpenAI chat completions API (482 lines)
 - `server/routes/ai.ts` — 4 endpoints: `/api/ai/chat`, `/generate-copy`, `/content-brief`, `/campaign-suggest`
-- `src/services/ai.ts` — Frontend client with typed functions
+- `client/services/ai.ts` — Frontend client with typed functions
 - Context-aware chat with product/keyword/market/budget context
 - Ad copy generation with strict character limit enforcement
 - Content brief and campaign structure suggestion
@@ -152,15 +152,15 @@ interface BudgetAllocation {
 **Complexity:** Medium | **Dependencies:** Phase 2 + Phase 4
 
 ### Delivered
-- `src/components/panels/AudiencePanel.tsx` — Full ICP builder, persona cards, audience segments, keyword-persona mapping
-- `src/components/sidebar/AudienceTab.tsx` — Sidebar summary with ICP/persona/segment cards
+- `client/components/panels/AudiencePanel.tsx` — Full ICP builder, persona cards, audience segments, keyword-persona mapping
+- `client/components/sidebar/AudienceTab.tsx` — Sidebar summary with ICP/persona/segment cards
 - AI endpoints: POST /api/ai/generate-icp and POST /api/ai/generate-persona
 - Editable tag lists, expandable cards, "Generate with AI" buttons
 
 ### Goal
 ICP builder, buyer persona framework, audience segmentation. Focused on search intent personas — who is searching for these keywords and why.
 
-### Types (add to `src/types/index.ts`)
+### Types (add to `client/types/index.ts`)
 
 ```typescript
 interface IcpProfile {
@@ -208,8 +208,8 @@ interface AudienceSegment {
 
 | File | Purpose |
 |------|---------|
-| `src/components/panels/AudiencePanel.tsx` | ICP builder, persona cards, audience segments |
-| `src/components/sidebar/AudienceTab.tsx` | Sidebar summary of ICPs, personas, segments |
+| `client/components/panels/AudiencePanel.tsx` | ICP builder, persona cards, audience segments |
+| `client/components/sidebar/AudienceTab.tsx` | Sidebar summary of ICPs, personas, segments |
 
 ### AudiencePanel Sections
 
@@ -223,11 +223,11 @@ interface AudienceSegment {
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add `icpProfiles`, `buyerPersonas`, `audienceSegments` state, `panelMode: "audience"`, CRUD handlers |
-| `src/constants/sampleData.ts` | Add `SAMPLE_ICP`, `SAMPLE_PERSONAS`, `SAMPLE_AUDIENCE_SEGMENTS` |
-| `src/components/sidebar/IconRail.tsx` | Add audience tab button (`Users` icon) |
-| `src/components/sidebar/index.ts` | Export AudienceTab |
-| `src/components/panels/index.ts` | Export AudiencePanel |
+| `client/App.tsx` | Add `icpProfiles`, `buyerPersonas`, `audienceSegments` state, `panelMode: "audience"`, CRUD handlers |
+| `client/constants/sampleData.ts` | Add `SAMPLE_ICP`, `SAMPLE_PERSONAS`, `SAMPLE_AUDIENCE_SEGMENTS` |
+| `client/components/sidebar/IconRail.tsx` | Add audience tab button (`Users` icon) |
+| `client/components/sidebar/index.ts` | Export AudienceTab |
+| `client/components/panels/index.ts` | Export AudiencePanel |
 | `server/routes/ai.ts` | Add `POST /api/ai/generate-icp` and `POST /api/ai/generate-persona` |
 
 ---
@@ -237,14 +237,14 @@ interface AudienceSegment {
 **Complexity:** Medium-High | **Dependencies:** Phase 2 + Phase 3
 
 ### Delivered
-- `src/components/panels/TimelinePanel.tsx` — Gantt-style campaign roadmap with phase bars, milestones, seasonal adjustments, market sequencing, budget over time chart
+- `client/components/panels/TimelinePanel.tsx` — Gantt-style campaign roadmap with phase bars, milestones, seasonal adjustments, market sequencing, budget over time chart
 - Pure CSS/HTML Gantt chart with month gridlines, phase editor, milestone CRUD
 - Sample timeline with 4 phases: UK Launch, UK Conversion, US Entry, DACH Expansion
 
 ### Goal
 Market entry sequencing, phase gates, launch dates, seasonal adjustments, Gantt-style visualization for search campaigns.
 
-### Types (add to `src/types/index.ts`)
+### Types (add to `client/types/index.ts`)
 
 ```typescript
 type PhaseGate = 'awareness' | 'consideration' | 'conversion' | 'retention';
@@ -293,7 +293,7 @@ interface CampaignTimeline {
 
 | File | Purpose |
 |------|---------|
-| `src/components/panels/TimelinePanel.tsx` | Gantt-style campaign roadmap |
+| `client/components/panels/TimelinePanel.tsx` | Gantt-style campaign roadmap |
 
 ### TimelinePanel Sections
 
@@ -308,10 +308,10 @@ interface CampaignTimeline {
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add `timeline`, `activePhase` state, CRUD handlers for phases/milestones, `panelMode: "timeline"` |
-| `src/constants/sampleData.ts` | Add `SAMPLE_TIMELINE` with international launch phases |
-| `src/components/sidebar/ChatTab.tsx` | Add "timeline" panel mode button |
-| `src/components/panels/index.ts` | Export TimelinePanel |
+| `client/App.tsx` | Add `timeline`, `activePhase` state, CRUD handlers for phases/milestones, `panelMode: "timeline"` |
+| `client/constants/sampleData.ts` | Add `SAMPLE_TIMELINE` with international launch phases |
+| `client/components/sidebar/ChatTab.tsx` | Add "timeline" panel mode button |
+| `client/components/panels/index.ts` | Export TimelinePanel |
 
 ### Backend
 No backend — timeline data is client-side state.
@@ -323,11 +323,11 @@ No backend — timeline data is client-side state.
 **Complexity:** High | **Dependencies:** All previous phases
 
 ### Delivered
-- `src/hooks/usePortfolioState.ts` — Custom useReducer hook encapsulating all product-scoped state (keywords, campaigns, channels, ICP, personas, segments, timeline, budget, seeds, groups, Bing data, competitors, gaps). 7 action types including functional updates. Replaces ~15 useState calls in App.tsx.
-- `src/components/panels/PortfolioPanel.tsx` — Portfolio dashboard with summary cards (products, budget, keywords, ROAS), sortable product performance table, budget allocation chart, top opportunities with recommendations, quick actions grid.
-- `src/components/sidebar/ProductSwitcher.tsx` — Compact dropdown product selector with letter circle, positioned dropdown, click-outside close. Replaces the logo in the icon rail.
-- `src/components/sidebar/ProductFormModal.tsx` — Full-screen overlay modal for product create/edit with 6 form fields (name, description, ACV, target, integrations, website URL).
-- `src/constants/sampleProduct2.ts` — Second sample product "Orion CRM" with complete data: 15 CRM keywords, 1 campaign with 3 ad groups, channel configs, ICP, 2 personas, audience segment, timeline with 2 phases, seed keywords, saved groups.
+- `client/hooks/usePortfolioState.ts` — Custom useReducer hook encapsulating all product-scoped state (keywords, campaigns, channels, ICP, personas, segments, timeline, budget, seeds, groups, Bing data, competitors, gaps). 7 action types including functional updates. Replaces ~15 useState calls in App.tsx.
+- `client/components/panels/PortfolioPanel.tsx` — Portfolio dashboard with summary cards (products, budget, keywords, ROAS), sortable product performance table, budget allocation chart, top opportunities with recommendations, quick actions grid.
+- `client/components/sidebar/ProductSwitcher.tsx` — Compact dropdown product selector with letter circle, positioned dropdown, click-outside close. Replaces the logo in the icon rail.
+- `client/components/sidebar/ProductFormModal.tsx` — Full-screen overlay modal for product create/edit with 6 form fields (name, description, ACV, target, integrations, website URL).
+- `client/constants/sampleProduct2.ts` — Second sample product "Orion CRM" with complete data: 15 CRM keywords, 1 campaign with 3 ad groups, channel configs, ICP, 2 personas, audience segment, timeline with 2 phases, seed keywords, saved groups.
 - Product switching scopes all data per product (keywords, campaigns, budget, audience, timeline)
 - Portfolio dashboard shows cross-product aggregate metrics
 - Full product CRUD: create, edit, duplicate, delete (with last-product protection)
@@ -338,41 +338,41 @@ No backend — timeline data is client-side state.
 
 | Phase | File | Purpose |
 |-------|------|---------|
-| 1 ✅ | `src/services/export.ts` | CSV, Google Ads Editor, PDF export |
-| 2 ✅ | `src/components/panels/CampaignBuilderPanel.tsx` | Full CRUD campaign builder |
-| 3 | `src/components/panels/BudgetAllocatorPanel.tsx` | Google/Bing budget allocation |
+| 1 ✅ | `client/services/export.ts` | CSV, Google Ads Editor, PDF export |
+| 2 ✅ | `client/components/panels/CampaignBuilderPanel.tsx` | Full CRUD campaign builder |
+| 3 | `client/components/panels/BudgetAllocatorPanel.tsx` | Google/Bing budget allocation |
 | 3 | `server/routes/budget.ts` | Budget optimization endpoint |
 | 3 | `server/services/budget.ts` | Channel mix optimization |
-| 3 | `src/services/budget.ts` | Frontend budget client |
+| 3 | `client/services/budget.ts` | Frontend budget client |
 | 4 ✅ | `server/routes/ai.ts` | AI chat + generation endpoints |
 | 4 ✅ | `server/services/ai.ts` | OpenAI chat completions integration |
-| 4 ✅ | `src/services/ai.ts` | Frontend AI client |
-| 5 | `src/components/panels/AudiencePanel.tsx` | ICP, persona, segment builder |
-| 5 | `src/components/sidebar/AudienceTab.tsx` | Audience sidebar summary |
-| 6 | `src/components/panels/TimelinePanel.tsx` | Gantt-style campaign roadmap |
-| 7 ✅ | `src/hooks/usePortfolioState.ts` | Product-scoped state management hook |
-| 7 ✅ | `src/components/panels/PortfolioPanel.tsx` | Portfolio dashboard |
-| 7 ✅ | `src/components/sidebar/ProductSwitcher.tsx` | Product selector dropdown |
-| 7 ✅ | `src/components/sidebar/ProductFormModal.tsx` | Product create/edit modal |
-| 7 ✅ | `src/constants/sampleProduct2.ts` | Orion CRM sample data |
+| 4 ✅ | `client/services/ai.ts` | Frontend AI client |
+| 5 | `client/components/panels/AudiencePanel.tsx` | ICP, persona, segment builder |
+| 5 | `client/components/sidebar/AudienceTab.tsx` | Audience sidebar summary |
+| 6 | `client/components/panels/TimelinePanel.tsx` | Gantt-style campaign roadmap |
+| 7 ✅ | `client/hooks/usePortfolioState.ts` | Product-scoped state management hook |
+| 7 ✅ | `client/components/panels/PortfolioPanel.tsx` | Portfolio dashboard |
+| 7 ✅ | `client/components/sidebar/ProductSwitcher.tsx` | Product selector dropdown |
+| 7 ✅ | `client/components/sidebar/ProductFormModal.tsx` | Product create/edit modal |
+| 7 ✅ | `client/constants/sampleProduct2.ts` | Orion CRM sample data |
 
 ## All Modified Files Summary
 
 | File | Phases | Changes |
 |------|--------|---------|
-| `src/App.tsx` | All | State variables, handlers, panel rendering, sidebar routing |
-| `src/types/index.ts` | All | Type definitions for each phase |
-| `src/constants/sampleData.ts` | 2,3,5,6 | Updated/new sample data |
-| `src/components/panels/index.ts` | 2,3,5,6 | Barrel exports for new panels |
-| `src/components/sidebar/index.ts` | 5 | Barrel export for AudienceTab |
-| `src/components/sidebar/ChatTab.tsx` | 3,6 | New panel mode buttons |
-| `src/components/sidebar/IconRail.tsx` | 5 | Audience tab button |
-| `src/components/sidebar/CampaignsTab.tsx` | 1,2 | Wire export + CRUD handlers |
+| `client/App.tsx` | All | State variables, handlers, panel rendering, sidebar routing |
+| `client/types/index.ts` | All | Type definitions for each phase |
+| `client/constants/sampleData.ts` | 2,3,5,6 | Updated/new sample data |
+| `client/components/panels/index.ts` | 2,3,5,6 | Barrel exports for new panels |
+| `client/components/sidebar/index.ts` | 5 | Barrel export for AudienceTab |
+| `client/components/sidebar/ChatTab.tsx` | 3,6 | New panel mode buttons |
+| `client/components/sidebar/IconRail.tsx` | 5 | Audience tab button |
+| `client/components/sidebar/CampaignsTab.tsx` | 1,2 | Wire export + CRUD handlers |
 | `server/index.ts` | 3 | Register budget router |
-| `src/App.tsx` | 7 | Replaced ~15 useState with usePortfolioState hook, added PortfolioPanel/ProductFormModal renders |
-| `src/components/sidebar/IconRail.tsx` | 7 | Replaced logo with ProductSwitcher |
-| `src/components/sidebar/ProductsTab.tsx` | 7 | Added active product highlighting, CRUD buttons |
-| `src/components/sidebar/ChatTab.tsx` | 7 | Added portfolio panel mode button |
-| `src/components/panels/index.ts` | 7 | Export PortfolioPanel |
-| `src/components/sidebar/index.ts` | 7 | Export ProductSwitcher, ProductFormModal |
-| `src/constants/index.ts` | 7 | Export sampleProduct2 constants |
+| `client/App.tsx` | 7 | Replaced ~15 useState with usePortfolioState hook, added PortfolioPanel/ProductFormModal renders |
+| `client/components/sidebar/IconRail.tsx` | 7 | Replaced logo with ProductSwitcher |
+| `client/components/sidebar/ProductsTab.tsx` | 7 | Added active product highlighting, CRUD buttons |
+| `client/components/sidebar/ChatTab.tsx` | 7 | Added portfolio panel mode button |
+| `client/components/panels/index.ts` | 7 | Export PortfolioPanel |
+| `client/components/sidebar/index.ts` | 7 | Export ProductSwitcher, ProductFormModal |
+| `client/constants/index.ts` | 7 | Export sampleProduct2 constants |

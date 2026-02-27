@@ -28,7 +28,7 @@ export interface ChatResponse {
   suggestedAction?: {
     type: "switch-panel" | "add-keywords" | "create-campaign" | "update-budget";
     panel?: string;
-    payload?: any;
+    payload?: Record<string, unknown>;
   };
   sources?: { url: string; snippet: string }[];
 }

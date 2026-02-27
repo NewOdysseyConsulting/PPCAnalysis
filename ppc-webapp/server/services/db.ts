@@ -24,8 +24,8 @@ export function getDb(): KnexInstance {
       pool: {
         min: 0,
         max: 10,
-        afterCreate(conn: any, done: (err: Error | null, conn: any) => void) {
-          pgvector.registerTypes(conn).then(() => done(null, conn)).catch((err) => done(err, conn));
+        afterCreate(conn: unknown, done: (err: Error | null, conn: unknown) => void) {
+          pgvector.registerTypes(conn).then(() => done(null, conn)).catch((err: Error) => done(err, conn));
         },
       },
     });
@@ -144,6 +144,21 @@ async function runMigrations(knex: KnexInstance): Promise<void> {
       t.timestamp("started_at", { useTz: true });
       t.timestamp("completed_at", { useTz: true });
       t.timestamp("created_at", { useTz: true }).defaultTo(knex.fn.now());
+    });
+  }
+
+  // ── Table 7: Google auth tokens ──
+  if (!(await knex.schema.hasTable("google_auth_tokens"))) {
+    await knex.schema.createTable("google_auth_tokens", (t) => {
+      t.text("service").primary();
+      t.text("access_token");
+      t.text("refresh_token");
+      t.timestamp("token_expiry", { useTz: true });
+      t.jsonb("scopes");
+      t.text("property_id");
+      t.text("customer_id");
+      t.timestamp("created_at", { useTz: true }).defaultTo(knex.fn.now());
+      t.timestamp("updated_at", { useTz: true }).defaultTo(knex.fn.now());
     });
   }
 

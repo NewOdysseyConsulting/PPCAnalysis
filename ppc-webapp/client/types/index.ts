@@ -2,6 +2,9 @@
 export type { StripeMetrics, StripeAttribution, StripeTimelinePoint } from "../services/stripe";
 export type { SerpFeatureResult, SerpCompetitor, HistoricalRank, BacklinkProfile, GscData, ContentGap } from "../services/seo";
 export type { NormalizedKeyword, NormalizedTrafficResult, Product as DfsProduct } from "../services/dataforseo";
+export type { GA4Data, GA4Overview, GA4Channel, GA4Page, GA4Conversion } from "../services/google-analytics";
+export type { PushCampaignInput, PushCampaignResult } from "../services/google-ads";
+export type { GoogleConnectionStatus } from "../services/google-auth";
 
 // ── Campaign Builder Types ──
 

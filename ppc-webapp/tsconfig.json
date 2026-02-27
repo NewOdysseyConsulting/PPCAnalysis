@@ -15,6 +15,6 @@
     "allowImportingTsExtensions": true,
     "paths": {}
   },
-  "include": ["src"],
+  "include": ["client"],
   "exclude": ["node_modules", "dist", "server"]
 }

@@ -145,7 +145,7 @@ export async function getSiteStats(): Promise<{
       db.raw("MAX(cp.crawled_at) as last_crawled")
     );
 
-  return rows.map((r: any) => ({
+  return (rows as Array<{ site_id: string; page_count: string; chunk_count: string; last_crawled: string }>).map((r) => ({
     siteId: r.site_id,
     pageCount: parseInt(r.page_count, 10),
     chunkCount: parseInt(r.chunk_count, 10),
@@ -285,14 +285,15 @@ async function runCrawlLoop(
           }
         }
       }
-    } catch (err: any) {
-      console.error(`[SiteCrawler] Error crawling ${normalUrl}:`, err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[SiteCrawler] Error crawling ${normalUrl}:`, message);
       await db("crawled_pages")
         .insert({
           site_id: siteId,
           url: normalUrl,
           status: "failed",
-          error: err.message,
+          error: message,
           depth: item.depth,
           crawled_at: db.fn.now(),
         })
@@ -385,7 +386,22 @@ function isSameDomain(url: string, domain: string): boolean {
   }
 }
 
-function mapCrawlJob(row: any): CrawlJob {
+interface CrawlJobRow {
+  id: number;
+  site_id: string;
+  seed_url: string;
+  max_depth: number;
+  max_pages: number;
+  status: string;
+  pages_crawled: number;
+  pages_total: number;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+function mapCrawlJob(row: CrawlJobRow): CrawlJob {
   return {
     id: row.id,
     siteId: row.site_id,
