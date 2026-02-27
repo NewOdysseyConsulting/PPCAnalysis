@@ -39,6 +39,7 @@ ppc-webapp/
       search-console.ts        # Frontend client for /api/gsc/* (GSC live data)
       google-ads.ts            # Frontend client for /api/google-ads/* (campaign performance + push)
       google-auth.ts           # Frontend client for /api/google/* (OAuth status + URL)
+      pipeline.ts              # Frontend client for /api/pipeline/* (submit, poll, list jobs)
     types/
       index.ts                 # Re-exports service types (including GA4, Google Ads, Google Auth)
   server/
@@ -49,7 +50,7 @@ ppc-webapp/
       seo.ts                   # SEO mock data service (SERP features, backlinks, GSC, rank history, content gaps)
       ai.ts                    # OpenAI chat completions + JSON extraction + product extraction + ad copy
       crawl.ts                 # Single-page website crawler (fetch + HTML text extraction)
-      db.ts                    # Knex instance (pg + pgvector), schema migrations (7 tables), HNSW indexes
+      db.ts                    # Knex instance (pg + pgvector), schema migrations (8 tables), HNSW indexes
       embeddings.ts            # Embedding generation (text-embedding-3-small), vector storage/query, text chunking
       siteCrawler.ts           # Recursive BFS site crawler with robots.txt, chunking, embedding pipeline
       chatHistory.ts           # Persistent chat storage + RAG-augmented context retrieval
@@ -58,6 +59,8 @@ ppc-webapp/
       google-analytics.ts      # GA4 Data API: overview, channels, pages, conversions, trends
       search-console.ts        # Google Search Console API: queries, pages, devices, countries, trends
       google-ads.ts            # Google Ads API: campaign performance, keywords, search terms, push campaigns
+      jobQueue.ts              # pg-boss job queue initialization + worker registration
+      pipeline.ts              # Keyword research agent pipeline: tools, agents, scoring, pg-boss worker
     routes/
       keywords.ts              # /api/keywords/* — 15 endpoints for keyword research
       stripe.ts                # /api/stripe/* — metrics, attribution, timeline, webhook
@@ -69,12 +72,7 @@ ppc-webapp/
       google-analytics.ts      # /api/ga4/* — data, test, configured
       search-console.ts        # /api/gsc/* — data, sites, test, configured
       google-ads.ts            # /api/google-ads/* — campaigns, keywords, search-terms, quality-scores, push, status
-  agents/
-    pipeline.ts                # OpenAI agent pipeline: seed expansion → competitor analysis → scoring → report
-    tools.ts                   # Agent tools wrapping DataForSEO endpoints
-    scoring.ts                 # Keyword scoring algorithm
-    types.ts                   # Pipeline config and result types
-    run.ts                     # CLI entry point
+      pipeline.ts              # /api/pipeline/* — run, jobs/:id, jobs (keyword research pipeline)
 ```
 
 ### Key Patterns
@@ -91,13 +89,13 @@ ppc-webapp/
 - **Knowledge base via embeddings** — Recursive site crawler stores pages, chunks them, generates embeddings, and stores as `vector(1536)` columns in PostgreSQL. Semantic search uses pgvector's `<=>` cosine distance operator with HNSW indexes for fast approximate nearest neighbor search.
 - **Semantic keyword clustering** — Agglomerative clustering over keyword embeddings with cosine distance threshold. Clusters are labelled by AI. Stored per product in PostgreSQL with centroid vectors.
 - **Product onboarding wizard** — 4-step flow: URL → crawl + AI extract → keyword review → ad copy generation. Uses `ProductOnboardingWizard` component.
+- **Keyword research pipeline via pg-boss** — Multi-stage OpenAI Agents SDK pipeline (seed expansion → competitor analysis → scoring → report) runs as a background job via pg-boss. Submit via `POST /api/pipeline/run`, poll via `GET /api/pipeline/jobs/:id`. Tools call DataForSEO service functions directly (no HTTP loopback). Progress tracked in `pipeline_runs` table with stage updates (queued → expanding → analyzing → scoring → reporting → completed/failed).
 
 ### Running the App
 ```bash
 npm run dev          # Vite dev server (frontend only, port 5173)
-npm run server       # Express backend (port 3001)
+npm run server       # Express backend (port 3001) + pg-boss job queue
 npm run dev:all      # Both concurrently
-npm run pipeline     # Run agent keyword research pipeline (CLI)
 npm run build        # Vite production build
 ```
 

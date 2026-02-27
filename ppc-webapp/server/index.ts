@@ -18,7 +18,9 @@ import googleAuthRouter from "./routes/google-auth.ts";
 import ga4Router from "./routes/google-analytics.ts";
 import gscRouter from "./routes/search-console.ts";
 import googleAdsRouter from "./routes/google-ads.ts";
+import pipelineRouter from "./routes/pipeline.ts";
 import { initDb, closeDb } from "./services/db.ts";
+import { startJobQueue, stopJobQueue } from "./services/jobQueue.ts";
 
 interface ApiError extends Error {
   status?: number;
@@ -48,6 +50,7 @@ app.use("/api/google", googleAuthRouter);
 app.use("/api/ga4", ga4Router);
 app.use("/api/gsc", gscRouter);
 app.use("/api/google-ads", googleAdsRouter);
+app.use("/api/pipeline", pipelineRouter);
 
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -59,8 +62,9 @@ app.use((err: ApiError, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err.message });
 });
 
-// Initialize database and start server
-initDb().then(() => {
+// Initialize database, job queue, and start server
+initDb().then(async () => {
+  await startJobQueue();
   app.listen(PORT, () => {
     console.log(`Orion API server running on http://localhost:${PORT}`);
     if (process.env.DATAFORSEO_LOGIN) {
@@ -70,10 +74,15 @@ initDb().then(() => {
     }
   });
 }).catch((err) => {
-  console.error("[DB] Failed to initialize database:", err);
+  console.error("[DB] Failed to initialize:", err);
   process.exit(1);
 });
 
 // Graceful shutdown
-process.on("SIGINT", () => { closeDb().then(() => process.exit(0)); });
-process.on("SIGTERM", () => { closeDb().then(() => process.exit(0)); });
+const shutdown = async () => {
+  await stopJobQueue();
+  await closeDb();
+  process.exit(0);
+};
+process.on("SIGINT", () => { shutdown(); });
+process.on("SIGTERM", () => { shutdown(); });

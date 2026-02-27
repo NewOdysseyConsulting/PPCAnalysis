@@ -162,6 +162,22 @@ async function runMigrations(knex: KnexInstance): Promise<void> {
     });
   }
 
+  // ── Table 8: Pipeline runs ──
+  if (!(await knex.schema.hasTable("pipeline_runs"))) {
+    await knex.schema.createTable("pipeline_runs", (t) => {
+      t.text("id").primary();
+      t.text("product_id").index("idx_pipeline_product");
+      t.text("status").notNullable().defaultTo("queued");
+      t.text("stage_detail");
+      t.jsonb("config").notNullable();
+      t.jsonb("result");
+      t.text("error");
+      t.timestamp("created_at", { useTz: true }).defaultTo(knex.fn.now());
+      t.timestamp("started_at", { useTz: true });
+      t.timestamp("completed_at", { useTz: true });
+    });
+  }
+
   // ── HNSW indexes for fast vector similarity search ──
   const hnswIndexes = [
     { table: "content_chunks", column: "embedding", name: "idx_chunks_embedding" },
