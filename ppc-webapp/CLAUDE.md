@@ -87,6 +87,7 @@ ppc-webapp/
 - **Product-scoped state via usePortfolioState hook** — keywords, campaigns, channels, ICP, personas, segments, timeline, budget, seeds, groups, Bing data, competitors, and gaps are all scoped per product via `useReducer`. Wrapper setters in App.tsx maintain backward-compatible `setX(val)` and `setX(prev => ...)` API. Non-product state (messages, panelMode, API credentials, SEO data, Stripe data, Google API state) remains as `useState` in App.tsx.
 - **Panels are pure renderers** — each panel component under `components/panels/` receives only what it needs. No fetch logic in panels.
 - **Services proxy through Express** — frontend clients call `/api/*` which the Express server handles. No direct third-party API calls from the browser.
+- **Express serves React in production** — `vite build` outputs to `dist/`. Express serves these static files and falls back to `index.html` for any non-API route (SPA fallback). In dev, Vite's dev server proxies `/api` to Express. Docker uses a multi-stage build (stage 1: Vite build, stage 2: production server + built client).
 - **Live SEO data via DataForSEO** — `server/services/seo.ts` calls DataForSEO SERP, Labs, and Backlinks APIs when credentials are available. Falls back to mock data generators when no credentials are provided. Routes in `server/routes/seo.ts` extract credentials from env vars (`DATAFORSEO_LOGIN`/`DATAFORSEO_PASSWORD`) or request headers (`x-dfs-login`/`x-dfs-password`).
 - **Google API dual-mode auth** — Service account (`GOOGLE_SERVICE_ACCOUNT_KEY` JSON) or OAuth2 (`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`). Tokens stored in `google_auth_tokens` DB table. Shared via `server/services/google-auth.ts`.
 - **GA/GSC panels support both mock and live data** — GaPanel accepts `liveGA`, `gaLoading`, `gaConnected`, `handleFetchGA` optional props. When `liveGA` is provided, it renders live data; otherwise falls back to `adjustedGA` sample data. GscPanel similarly tries live GSC API when `googleStatus.gsc` is true.
@@ -101,12 +102,20 @@ ppc-webapp/
 
 ### Running the App
 ```bash
+# Development
 npm run dev          # Vite dev server (frontend only, port 5173)
 npm run server       # Express backend (port 3001) + pg-boss job queue
 npm run dev:all      # Both concurrently
-npm run build        # Vite production build
+
+# Production
+npm run build:all    # Build React client → dist/
+npm start            # Express serves API + React client on port 3001
+
+# Utilities
 npm run lint         # ESLint
 ```
+
+In production, Express serves the Vite-built `dist/` folder as static files. Any request that doesn't match `/api/*` or a static file serves `index.html` for client-side routing (SPA fallback). In development, Vite's dev server proxies `/api` requests to Express.
 
 ### Environment Variables
 ```

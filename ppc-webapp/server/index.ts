@@ -1,5 +1,8 @@
 import "dotenv/config";
 import express, { type Request, type Response, type NextFunction } from "express";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -26,8 +29,14 @@ interface ApiError extends Error {
   status?: number;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// In production the Vite build output lives in ../dist (relative to server/)
+const CLIENT_BUILD_PATH = path.join(__dirname, "..", "dist");
 
 app.use(cors({ origin: true, credentials: true }));
 
@@ -39,6 +48,7 @@ app.use("/api/stripe/webhook", express.raw({ type: "application/json" }), (req: 
 
 app.use(express.json({ limit: "2mb" }));
 
+// ── API routes ──
 app.use("/api/keywords", keywordsRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/seo", seoRouter);
@@ -56,6 +66,26 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// ── Serve React client (production) ──
+// Serve static assets from the Vite build output folder
+if (fs.existsSync(CLIENT_BUILD_PATH)) {
+  app.use(express.static(CLIENT_BUILD_PATH));
+
+  // Any request that doesn't match a static file or /api/* serves index.html
+  // so that client-side routing works (SPA fallback)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api/")) {
+      next();
+    } else {
+      res.header("Cache-Control", "private, no-cache, no-store, must-revalidate");
+      res.header("Expires", "-1");
+      res.header("Pragma", "no-cache");
+      res.sendFile(path.join(CLIENT_BUILD_PATH, "index.html"));
+    }
+  });
+}
+
+// ── Error handler ──
 app.use((err: ApiError, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || 500;
   console.error(`[API Error] ${err.message}`);
@@ -66,7 +96,12 @@ app.use((err: ApiError, _req: Request, res: Response, _next: NextFunction) => {
 initDb().then(async () => {
   await startJobQueue();
   app.listen(PORT, () => {
-    console.log(`Orion API server running on http://localhost:${PORT}`);
+    console.log(`Orion server running on http://localhost:${PORT}`);
+    if (fs.existsSync(CLIENT_BUILD_PATH)) {
+      console.log(`Serving React client from ${CLIENT_BUILD_PATH}`);
+    } else {
+      console.log("No client build found — API-only mode (run 'npm run build' to serve the UI)");
+    }
     if (process.env.DATAFORSEO_LOGIN) {
       console.log("DataForSEO credentials loaded from environment");
     } else {

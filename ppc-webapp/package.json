@@ -8,6 +8,8 @@
     "server": "tsx server/index.ts",
     "dev:all": "tsx server/index.ts & vite",
     "build": "vite build",
+    "build:all": "vite build && echo 'Client built to dist/'",
+    "start": "node --import tsx server/index.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -28,6 +30,8 @@
     "react-dom": "^19.2.0",
     "robots-parser": "^3.0.1",
     "stripe": "^20.3.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -42,8 +46,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }
 }
